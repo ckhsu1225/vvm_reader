@@ -4,6 +4,7 @@ VVM Reader Vertical Level Processing
 This module handles vertical coordinate processing including level selection and fort.98 reading.
 """
 
+from functools import lru_cache
 from typing import Optional, Tuple
 from pathlib import Path
 import numpy as np
@@ -17,26 +18,34 @@ from ..core.exceptions import RequiredFileNotFoundError, ParameterError, DataPro
 # fort.98 Processing
 # ============================================================================
 
+@lru_cache(maxsize=16)
 def read_vertical_levels_from_fort98(sim_dir: Path) -> np.ndarray:
     """
-    Read ZT(K) vertical levels from fort.98 file.
-    
+    Read ZT(K) vertical levels from fort.98 file with caching.
+
+    This function caches up to 16 different simulations to avoid repeatedly
+    parsing the same fort.98 file. Parsing fort.98 involves complex string
+    operations, so caching significantly improves performance.
+
     The fort.98 file contains vertical level information with the format:
-    - Header line: "K, ZZ(K),ZT(K),FNZ(K),FNT(K)"  
-    - Separator line: "=" 
+    - Header line: "K, ZZ(K),ZT(K),FNZ(K),FNT(K)"
+    - Separator line: "="
     - Data lines: K  ZZ(K)  ZT(K)  FNZ(K)  FNT(K)
-    
+
     Returns ZT(K) values for K=1..(Kmax-1), excluding the topmost level.
-    
+
     Args:
         sim_dir: Simulation directory path
-        
+
     Returns:
         np.ndarray: ZT(K) levels in meters
-        
+
     Raises:
         RequiredFileNotFoundError: If fort.98 file doesn't exist
         DataProcessingError: If file format is invalid
+
+    Note:
+        Cache can be cleared with: read_vertical_levels_from_fort98.cache_clear()
     """
     fort98_path = sim_dir / FORT98_FILENAME
     
@@ -185,7 +194,7 @@ def extend_vertical_slice_for_centering(
 
 def extract_surface_nearest_values(
     dataset: xr.Dataset,
-    surface_levels: xr.DataArray,
+    surface_level: xr.DataArray,
     vertical_selection: VerticalSelection
 ) -> xr.Dataset:
     """
@@ -196,7 +205,7 @@ def extract_surface_nearest_values(
     
     Args:
         dataset: Input dataset
-        surface_levels: surface-nearest level indices
+        surface_level: surface-nearest level indices
         vertical_selection: Vertical selection parameters
         
     Returns:
@@ -207,7 +216,7 @@ def extract_surface_nearest_values(
     
     try:
         # Convert topo to integer indices
-        sfc_indices = surface_levels.astype(np.int64)
+        sfc_indices = surface_level.astype(np.int64)
         
         if vertical_selection.surface_only:
             # Replace 3D variables with surface values (remove vertical dimension)
@@ -252,48 +261,6 @@ def extract_surface_nearest_values(
 # ============================================================================
 # Vertical Coordinate Utilities
 # ============================================================================
-
-def get_vertical_info(sim_dir: Path) -> dict:
-    """
-    Get information about vertical coordinate system.
-    
-    Args:
-        sim_dir: Simulation directory path
-        
-    Returns:
-        dict: Vertical coordinate information
-    """
-    info = {
-        'has_fort98': False,
-        'num_levels': None,
-        'height_range': None,
-        'level_spacing': None,
-        'fort98_path': sim_dir / FORT98_FILENAME,
-        'error': None
-    }
-    
-    try:
-        levels = read_vertical_levels_from_fort98(sim_dir)
-        info['has_fort98'] = True
-        info['num_levels'] = len(levels)
-        info['height_range'] = (float(levels.min()), float(levels.max()))
-        
-        if len(levels) > 1:
-            spacing = np.diff(levels)
-            info['level_spacing'] = {
-                'mean': float(np.mean(spacing)),
-                'min': float(np.min(spacing)),
-                'max': float(np.max(spacing)),
-                'uniform': bool(np.allclose(spacing, spacing[0], rtol=1e-6))
-            }
-    except RequiredFileNotFoundError:
-        info['error'] = 'fort.98 file not found'
-    except DataProcessingError as e:
-        info['error'] = f'fort.98 processing error: {e.reason}'
-    except Exception as e:
-        info['error'] = f'Unexpected error: {e}'
-    
-    return info
 
 def validate_vertical_selection(
     vertical_selection: VerticalSelection,

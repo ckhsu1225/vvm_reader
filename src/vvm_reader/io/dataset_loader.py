@@ -5,6 +5,7 @@ This module contains the core dataset loading functionality that orchestrates
 all the processing steps to load VVM data into xarray datasets.
 """
 
+import logging
 import xarray as xr
 from pathlib import Path
 
@@ -14,6 +15,9 @@ from ..core.exceptions import (
     NoDataError, validate_simulation_directory
 )
 
+# Get logger for this module
+logger = logging.getLogger('vvm_reader.io.dataset_loader')
+
 from ..io.file_utils import (
     resolve_groups_to_load, 
     get_variables_for_group, filter_files_by_groups
@@ -22,7 +26,7 @@ from ..io.manifest import load_or_create_manifest
 
 from ..coordinates.time_handler import filter_files_by_time
 
-from ..coordinates.spatial_handler import (
+from ..coordinates.spatial import (
     load_topo_dataset, extract_coordinates_from_topo, compute_surface_topo_levels,
     extract_terrain_mask, compute_regional_slices, compute_centering_slices, apply_spatial_selection,
     crop_dataset_after_centering, assign_spatial_coordinates
@@ -83,7 +87,7 @@ class VVMDatasetLoader:
             raise NoDataError("No valid groups found to load")
         
         # Step 2: Setup coordinate system
-        coord_info, sfc_levels, terrain_mask = self._setup_coordinates(params.processing_options.engine)
+        coord_info, sfc_level, terrain_mask = self._setup_coordinates(params.processing_options.engine)
         slice_info = compute_regional_slices(coord_info, params.region)
         
         # Step 3: Resolve vertical selection
@@ -120,7 +124,7 @@ class VVMDatasetLoader:
         
         # Step 8: Post-processing pipeline
         dataset = self._post_process_dataset(
-            dataset, params, coord_info, slice_info, sfc_levels,
+            dataset, params, coord_info, slice_info, sfc_level,
             crop_offsets, vertical_crop_offset, vertical_target_length,
             needs_centering, read_slice_info, terrain_mask,
             vertical_slice, vertical_read_slice
@@ -133,9 +137,9 @@ class VVMDatasetLoader:
         topo_ds = load_topo_dataset(self.sim_dir, engine)
         coord_info = extract_coordinates_from_topo(topo_ds)
         terrain_mask = extract_terrain_mask(topo_ds)
-        sfc_levels = compute_surface_topo_levels(terrain_mask)
+        sfc_level = compute_surface_topo_levels(terrain_mask['mask'])
         topo_ds.close()
-        return coord_info, sfc_levels, terrain_mask
+        return coord_info, sfc_level, terrain_mask
     
     def _check_wind_centering_needed(self, variables, center_staggered):
         """Check which wind variables need centering."""
@@ -177,7 +181,7 @@ class VVMDatasetLoader:
                 if group_ds is not None:
                     group_datasets.append(group_ds)
             except Exception as e:
-                print(f"Warning: Failed to load group {group}: {e}")
+                logger.warning("Failed to load group %s: %s", group, e)
                 continue
         
         return group_datasets
@@ -260,7 +264,7 @@ class VVMDatasetLoader:
             return None
     
     def _post_process_dataset(
-        self, dataset, params, coord_info, slice_info, sfc_levels,
+        self, dataset, params, coord_info, slice_info, sfc_level,
         crop_offsets, vertical_crop_offset, vertical_target_length,
         needs_centering, read_slice_info, terrain_mask,
         vertical_slice, vertical_read_slice
@@ -268,17 +272,16 @@ class VVMDatasetLoader:
         """Apply all post-processing operations."""
         
         mask_slice = read_slice_info if read_slice_info is not None else slice_info
-        mask_ds = terrain_mask.to_dataset(name="terrain_mask")
 
-        terrain_mask_center = apply_spatial_selection(mask_ds, coord_info, mask_slice)
+        terrain_mask_center = apply_spatial_selection(terrain_mask, coord_info, mask_slice)
         terrain_mask_center = apply_vertical_selection(
             terrain_mask_center, vertical_read_slice
-        )["terrain_mask"]
+        )["mask"]
 
-        terrain_mask_final = apply_spatial_selection(mask_ds, coord_info, slice_info)
+        terrain_mask_final = apply_spatial_selection(terrain_mask, coord_info, slice_info)
         terrain_mask_final = apply_vertical_selection(
             terrain_mask_final, vertical_slice
-        )["terrain_mask"]
+        )["mask"]
 
         # Step 1: Center staggered winds if requested
         created_center_vars = []
@@ -316,11 +319,11 @@ class VVMDatasetLoader:
 
         # Step 5: Extract surface values if requested
         if params.vertical_selection.surface_nearest:
-            sfc_levels = apply_spatial_selection(
-                sfc_levels.to_dataset(name="sfc_levels"), coord_info, slice_info
-            )["sfc_levels"]
+            sfc_level = apply_spatial_selection(
+                sfc_level, coord_info, slice_info
+            )["surface_level"]
             dataset = extract_surface_nearest_values(
-                dataset, sfc_levels, params.vertical_selection
+                dataset, sfc_level, params.vertical_selection
             )
 
         # Step 6: Filter to requested variables only

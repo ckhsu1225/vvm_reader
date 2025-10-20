@@ -46,6 +46,8 @@ from .main import (
     get_simulation_info,
     get_coordinate_info,
     get_terrain_info,
+    get_vertical_info,
+    get_spatial_info,
     convert_coordinates_to_indices,
     convert_indices_to_coordinates,
     convert_time_to_indices,
@@ -80,6 +82,9 @@ from .core.exceptions import (
     DataProcessingError,
 )
 
+# Import logging configuration
+from .core.logging_config import setup_logging, set_log_level
+
 # Define what gets imported with "from vvm_reader import *"
 __all__ = [
     # Version info
@@ -98,6 +103,8 @@ __all__ = [
     'get_simulation_info',
     'get_coordinate_info',
     'get_terrain_info',
+    'get_vertical_info',
+    'get_spatial_info',
     'convert_coordinates_to_indices',
     'convert_indices_to_coordinates',
     'convert_time_to_indices',
@@ -120,10 +127,14 @@ __all__ = [
     # Exception classes
     'VVMReaderError',
     'SimulationDirectoryError',
-    'GroupNotFoundError', 
+    'GroupNotFoundError',
     'VariableNotFoundError',
     'ManifestError',
     'DataProcessingError',
+
+    # Logging configuration
+    'setup_logging',
+    'set_log_level',
 ]
 
 # Package metadata

@@ -1,0 +1,41 @@
+"""
+VVM Reader Data Processing
+
+This package provides data processing functionality including terrain masking,
+wind centering, and vertical level processing.
+"""
+
+# Terrain processing functions
+from .terrain import (
+    apply_terrain_mask,
+    mask_wind_variables_for_centering,
+    center_staggered_winds,
+)
+
+# Vertical level processing functions
+from .vertical import (
+    read_vertical_levels_from_fort98,
+    resolve_vertical_slice,
+    extend_vertical_slice_for_centering,
+    extract_surface_nearest_values,
+    validate_vertical_selection,
+    apply_vertical_selection,
+    ensure_vertical_coordinate_in_meters,
+    crop_vertical_after_centering,
+)
+
+__all__ = [
+    # Terrain processing
+    "apply_terrain_mask",
+    "mask_wind_variables_for_centering",
+    "center_staggered_winds",
+    # Vertical level processing
+    "read_vertical_levels_from_fort98",
+    "resolve_vertical_slice",
+    "extend_vertical_slice_for_centering",
+    "extract_surface_nearest_values",
+    "validate_vertical_selection",
+    "apply_vertical_selection",
+    "ensure_vertical_coordinate_in_meters",
+    "crop_vertical_after_centering",
+]

@@ -52,11 +52,6 @@ def _validate_index_range(name: str, range_val: Optional[IndexRange], allow_nega
         if range_val[0] > range_val[1]:
             raise ValueError(f"{name}[0] must be <= {name}[1]")
 
-def _validate_positive_value(name: str, value: Union[int, float]) -> None:
-    """Validate that a value is positive."""
-    if value <= 0:
-        raise ValueError(f"{name} must be positive")
-
 # ============================================================================
 # Spatial Region
 # ============================================================================

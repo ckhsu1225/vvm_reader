@@ -5,6 +5,7 @@ This module centralizes all configuration parameters, constants, and default val
 for better maintainability and consistency across the codebase.
 """
 
+import os
 from pathlib import Path
 
 # ============================================================================
@@ -13,7 +14,7 @@ from pathlib import Path
 
 KNOWN_GROUPS = (
     "C.LandSurface",
-    "C.Surface", 
+    "C.Surface",
     "L.Dynamic",
     "L.Radiation",
     "L.Thermodynamic",
@@ -24,7 +25,14 @@ KNOWN_GROUPS = (
 # File Paths and Directories
 # ============================================================================
 
-DEFAULT_MANIFEST_DIR = Path("/data/ckhsu/vvm_reader/src/vvm_reader/data")
+# Use relative path for portability (relative to this module's location)
+# Users can override via VVM_READER_DATA_DIR environment variable
+DEFAULT_MANIFEST_DIR = Path(
+    os.environ.get(
+        "VVM_READER_DATA_DIR",
+        str(Path(__file__).parent.parent / "data")
+    )
+)
 DEFAULT_MANIFEST_FILENAME = "variable_manifest.json"
 
 # ============================================================================
