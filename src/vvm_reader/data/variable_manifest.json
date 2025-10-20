@@ -1,0 +1,1681 @@
+{
+  "SL1": {
+    "attrs": {
+      "long_name": "soil liquid layer 1",
+      "standard_name": "soill0_1lev",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "SL2": {
+    "attrs": {
+      "long_name": "soil liquid layer 2",
+      "standard_name": "soill0_2lev",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "SL3": {
+    "attrs": {
+      "long_name": "soil liquid layer 3",
+      "standard_name": "soill0_3lev",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "SL4": {
+    "attrs": {
+      "long_name": "soil liquid layer 4",
+      "standard_name": "soill0_4lev",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "SM1": {
+    "attrs": {
+      "long_name": "soil moisture layer 1",
+      "standard_name": "soilm0_1lev",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "SM2": {
+    "attrs": {
+      "long_name": "soil moisture layer 2",
+      "standard_name": "soilm0_2lev",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "SM3": {
+    "attrs": {
+      "long_name": "soil moisture layer 3",
+      "standard_name": "soilt0_3lev",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "SM4": {
+    "attrs": {
+      "long_name": "soil moisture layer 4",
+      "standard_name": "soilt0_4lev",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "ST1": {
+    "attrs": {
+      "long_name": "soil temperature layer 1",
+      "standard_name": "soilt0_1lev",
+      "units": "K"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "ST2": {
+    "attrs": {
+      "long_name": "soil temperature layer 2",
+      "standard_name": "soilt0_2lev",
+      "units": "K"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "ST3": {
+    "attrs": {
+      "long_name": "soil temperature layer 3",
+      "standard_name": "soilt0_3lev",
+      "units": "K"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "ST4": {
+    "attrs": {
+      "long_name": "soil temperature layer 4",
+      "standard_name": "soilt0_4lev",
+      "units": "K"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "albedo": {
+    "attrs": {
+      "long_name": "surface albedo(including snow-cover effects)",
+      "standard_name": "surface_albedo",
+      "units": "fractional"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "beta": {
+    "attrs": {
+      "long_name": "ratio of actual to potential evapotranspiration",
+      "standard_name": "ratio_of_actual_to_potential_evapotranspiration",
+      "units": "fraction"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "brim": {
+    "attrs": {
+      "long_name": "riming cloud ice volume mixing ratio",
+      "standard_name": "riming_cloud_ice_volume_mixing_ratio",
+      "units": "m^3 kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Thermodynamic"
+    ]
+  },
+  "ch": {
+    "attrs": {
+      "long_name": "surface exchange coefficient for heat and moisture",
+      "standard_name": "sfc_exchange_coef_heat",
+      "units": "m-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "cldfrc": {
+    "attrs": {
+      "long_name": "Cloud fraction",
+      "standard_name": "cloud_fraction",
+      "units": "-"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "cm": {
+    "attrs": {
+      "long_name": "surface exchange coefficient for momentum",
+      "standard_name": "sfc_exchange_coef_momentum",
+      "units": "m s-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "cmc": {
+    "attrs": {
+      "long_name": "canopy moisture content",
+      "standard_name": "canopy_moisture_content",
+      "units": "kg m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "dew": {
+    "attrs": {
+      "long_name": "dewfall",
+      "standard_name": "dewfall",
+      "units": "m"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "drip": {
+    "attrs": {
+      "long_name": "precipitation falling through canopy",
+      "standard_name": "precipitation_fall_through_canopy",
+      "units": "m"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "dtradlw": {
+    "attrs": {
+      "long_name": "Net longwave heating rate",
+      "standard_name": "longwave_heating_rate",
+      "units": "K s-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "dtradsw": {
+    "attrs": {
+      "long_name": "Net shortwave heating rate",
+      "standard_name": "shortwave_heating_rate",
+      "units": "K s-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "ec": {
+    "attrs": {
+      "long_name": "canopy water evaporation",
+      "standard_name": "canopy_water_evaporation",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "edir": {
+    "attrs": {
+      "long_name": "direct soil evaporation",
+      "standard_name": "direct_soil_evaporation",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "emissi": {
+    "attrs": {
+      "long_name": "emissivity",
+      "standard_name": "emissivity",
+      "units": "fractional"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "esnow": {
+    "attrs": {
+      "long_name": "sublimation from snowpack",
+      "standard_name": "sublimation_from_snowpack",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "et1": {
+    "attrs": {
+      "long_name": "plant transpiration layer 1",
+      "standard_name": "plant_transpiration_1lev",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "et2": {
+    "attrs": {
+      "long_name": "plant transpiration layer 2",
+      "standard_name": "plant_transpiration_2lev",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "et3": {
+    "attrs": {
+      "long_name": "plant transpiration layer 3",
+      "standard_name": "plant_transpiration_3lev",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "et4": {
+    "attrs": {
+      "long_name": "plant transpiration layer 4",
+      "standard_name": "plant_transpiration_4lev",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "eta": {
+    "attrs": {
+      "long_name": "latent heat flux(evapotranspiration)",
+      "standard_name": "latent_heat_flux",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface",
+      "L.Dynamic"
+    ]
+  },
+  "etp": {
+    "attrs": {
+      "long_name": "potentail evapotranspiration",
+      "standard_name": "potential_evapotranspiration",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "ett": {
+    "attrs": {
+      "long_name": "total plant transpiration",
+      "standard_name": "total_plant_transpiration",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "fdlw": {
+    "attrs": {
+      "long_name": "Downward flux of longwave radiation",
+      "standard_name": "downward_flux_longwave_radiation",
+      "units": "W/m**2"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "fdown": {
+    "attrs": {
+      "long_name": "radiation forcing at the surface",
+      "standard_name": "sfc_rad_forcing",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "fdsw": {
+    "attrs": {
+      "long_name": "Downward flux of shortwave radiation",
+      "standard_name": "downward_flux_shortwave_radiation",
+      "units": "W/m**2"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "fdswtoa": {
+    "attrs": {
+      "long_name": "Downward flux of shortwave radiation at TOA",
+      "standard_name": "downward_flux_shortwave_radiation_toa",
+      "units": "W/m**2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "flx1": {
+    "attrs": {
+      "long_name": "latent heat flux from precipitation accumulating as snow",
+      "standard_name": "latent_heat_flux_from_precipitation",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "flx2": {
+    "attrs": {
+      "long_name": "latent heat flux from freezing rain converting to ice",
+      "standard_name": "latent_heat_flux_from_rain_to_ice",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "flx3": {
+    "attrs": {
+      "long_name": "latent heat flux from melting snow",
+      "standard_name": "latent_heat_flux_from_snow",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "fulw": {
+    "attrs": {
+      "long_name": "Upward flux of longwave radiation",
+      "standard_name": "upward_flux_longwave_radiation",
+      "units": "W/m**2"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "fulwtoa": {
+    "attrs": {
+      "long_name": "Upward flux of longwave radiation at TOA",
+      "standard_name": "upward_flux_longwave_radiation_toa",
+      "units": "W/m**2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "fusw": {
+    "attrs": {
+      "long_name": "Upward flux of shortwave radiation",
+      "standard_name": "upward_flux_shortwave_radiation",
+      "units": "W/m**2"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "fuswtoa": {
+    "attrs": {
+      "long_name": "Upward flux of shortwave radiation at TOA",
+      "standard_name": "upward_flux_shortwave_radiation_toa",
+      "units": "W/m**2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "nc": {
+    "attrs": {
+      "long_name": "cloud water number mixing ratio",
+      "standard_name": "cloud_water_number_mixing_ratio",
+      "units": "kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Thermodynamic"
+    ]
+  },
+  "ni": {
+    "attrs": {
+      "long_name": "cloud ice number mixing ratio",
+      "standard_name": "cloud_ice_number_mixing_ratio",
+      "units": "kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Thermodynamic"
+    ]
+  },
+  "nr": {
+    "attrs": {
+      "long_name": "rain number mixing ratio",
+      "standard_name": "rain_number_mixing_ratio",
+      "units": "kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Thermodynamic"
+    ]
+  },
+  "olr": {
+    "attrs": {
+      "long_name": "Outgoing longwave radiation",
+      "standard_name": "outgoing_longwave_radiation",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.Surface"
+    ]
+  },
+  "pc": {
+    "attrs": {
+      "long_name": "plant coefficient",
+      "standard_name": "plant_coefficient",
+      "units": "fraction"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "q1": {
+    "attrs": {
+      "long_name": "effective mixing ratio at the surface",
+      "standard_name": "sfc_effective_mixing_ratio",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "qc": {
+    "attrs": {
+      "long_name": "cloud water mixing ratio",
+      "standard_name": "cloud_water_mixing",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Thermodynamic"
+    ]
+  },
+  "qi": {
+    "attrs": {
+      "long_name": "cloud ice mixing ratio",
+      "standard_name": "cloud_ice_mixing_ratio",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Thermodynamic"
+    ]
+  },
+  "qr": {
+    "attrs": {
+      "long_name": "rain mixing ratio",
+      "standard_name": "rain_mixing_ratio",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Thermodynamic"
+    ]
+  },
+  "qrim": {
+    "attrs": {
+      "long_name": "riming cloud ice mixing ratio",
+      "standard_name": "riming_cloud_ice_mixing_ratio",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Thermodynamic"
+    ]
+  },
+  "qv": {
+    "attrs": {
+      "long_name": "water vapor mixing ratio",
+      "standard_name": "vapor_mixing_ratio",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Thermodynamic"
+    ]
+  },
+  "rc": {
+    "attrs": {
+      "long_name": "canopy resistance",
+      "standard_name": "canopy_resistance",
+      "units": "s m-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "rcq": {
+    "attrs": {
+      "long_name": "atmospheric water vapor deficit rc factor",
+      "standard_name": "atmospheric_water_vapor_deficit_rc_factor",
+      "units": "dimensionless"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "rcs": {
+    "attrs": {
+      "long_name": "incoming solar rc factor",
+      "standard_name": "incoming_solar_rc_factor",
+      "units": "dimensionless"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "rcsoil": {
+    "attrs": {
+      "long_name": "soil moisture rc factor",
+      "standard_name": "soil_moisture_rc_factor",
+      "units": "dimensionless"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "rct": {
+    "attrs": {
+      "long_name": "air temperature rc factor",
+      "standard_name": "air_temperature_rc_factor",
+      "units": "dimensionless"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "rsmin": {
+    "attrs": {
+      "long_name": "minimum canopy resistance",
+      "standard_name": "minimum_canopy_resistance",
+      "units": "s m-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "runoff1": {
+    "attrs": {
+      "long_name": "surface runoff",
+      "standard_name": "sfc_runoff",
+      "units": "m s-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "runoff2": {
+    "attrs": {
+      "long_name": "subsurface runoff",
+      "standard_name": "subsurface_runoff",
+      "units": "m s-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "runoff3": {
+    "attrs": {
+      "long_name": "internal soil layer runoff",
+      "standard_name": "internal_soil_layer_runoff",
+      "units": "m s-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "smav1": {
+    "attrs": {
+      "long_name": "soil moisture availability at level 1",
+      "standard_name": "soil_moisture_availability_1lev",
+      "units": "fraction"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "smav2": {
+    "attrs": {
+      "long_name": "soil moisture availability at level 2",
+      "standard_name": "soil_moisture_availability_2lev",
+      "units": "fraction"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "smav3": {
+    "attrs": {
+      "long_name": "soil moisture availability at level 3",
+      "standard_name": "soil_moisture_availability_3lev",
+      "units": "fraction"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "smav4": {
+    "attrs": {
+      "long_name": "soil moisture availability at level 4",
+      "standard_name": "soil_moisture_availability_4lev",
+      "units": "fraction"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "smcdry": {
+    "attrs": {
+      "long_name": "dry soil moisture threshold where direct evaporation from the top layer ends",
+      "standard_name": "dry_soil_moisture_threshold",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "smcmax": {
+    "attrs": {
+      "long_name": "porosity",
+      "standard_name": "porosity",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "smcref": {
+    "attrs": {
+      "long_name": "soil moisture threshold where transpiration begins to stress",
+      "standard_name": "soil_moisture_threshold",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "smcwlt": {
+    "attrs": {
+      "long_name": "wilting point",
+      "standard_name": "wilting_point",
+      "units": "m3 m-3"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "sncovr": {
+    "attrs": {
+      "long_name": "fractional snow cover",
+      "standard_name": "fractional_snow_cover",
+      "units": "fraction"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "sneqv": {
+    "attrs": {
+      "long_name": "water equivalent snow depth",
+      "standard_name": "water_equivalent_snow_depth",
+      "units": "m"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "snomlt": {
+    "attrs": {
+      "long_name": "snow melt water",
+      "standard_name": "snow_melt_water",
+      "units": "m"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "snowh": {
+    "attrs": {
+      "long_name": "snow depth",
+      "standard_name": "snow_depth",
+      "units": "m"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "soilm": {
+    "attrs": {
+      "long_name": "total soil column moisture content",
+      "standard_name": "total_soil_column_moisture_content",
+      "units": "m"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "soilw": {
+    "attrs": {
+      "long_name": "available soil moisture in the root zone",
+      "standard_name": "available_soil_moisture_in_root_zone",
+      "units": "fraction"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "sprec": {
+    "attrs": {
+      "long_name": "Surface precipitation rate",
+      "standard_name": "sfc_precip_rate",
+      "units": "kg m-2 s-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.Surface"
+    ]
+  },
+  "ssoil": {
+    "attrs": {
+      "long_name": "soil heat flux",
+      "standard_name": "soil_heat_flux",
+      "units": "W m-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "t1": {
+    "attrs": {
+      "long_name": "skin temperature",
+      "standard_name": "skin_temperature",
+      "units": "K"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "tg": {
+    "attrs": {
+      "long_name": "Skin and sea surface temperature",
+      "standard_name": "Skin_temp",
+      "units": "K"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.Surface"
+    ]
+  },
+  "th": {
+    "attrs": {
+      "long_name": "potential temperature",
+      "standard_name": "potential_temperature",
+      "units": "K"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Thermodynamic"
+    ]
+  },
+  "tr01": {
+    "attrs": {
+      "long_name": "passive tracer mixing ratio 01",
+      "standard_name": "tracer_mixing_ratio 01",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Tracer"
+    ]
+  },
+  "tr02": {
+    "attrs": {
+      "long_name": "passive tracer mixing ratio 02",
+      "standard_name": "tracer_mixing_ratio 02",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Tracer"
+    ]
+  },
+  "tr03": {
+    "attrs": {
+      "long_name": "passive tracer mixing ratio 03",
+      "standard_name": "tracer_mixing_ratio 03",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Tracer"
+    ]
+  },
+  "tr04": {
+    "attrs": {
+      "long_name": "passive tracer mixing ratio 04",
+      "standard_name": "tracer_mixing_ratio 04",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Tracer"
+    ]
+  },
+  "tr05": {
+    "attrs": {
+      "long_name": "passive tracer mixing ratio 05",
+      "standard_name": "tracer_mixing_ratio 05",
+      "units": "kg kg-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Tracer"
+    ]
+  },
+  "u": {
+    "attrs": {
+      "long_name": "zonal velocity",
+      "standard_name": "zonal_velocity",
+      "units": "m s-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Dynamic"
+    ]
+  },
+  "uw": {
+    "attrs": {
+      "long_name": "Surface flux of u-momentum",
+      "standard_name": "sfc_flux_u_momentum",
+      "units": "kg m-1 s-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.Surface"
+    ]
+  },
+  "v": {
+    "attrs": {
+      "long_name": "meridional velocity",
+      "standard_name": "meridional_velocity",
+      "units": "m s-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Dynamic"
+    ]
+  },
+  "w": {
+    "attrs": {
+      "long_name": "vertical velocity",
+      "standard_name": "vertical_velocity",
+      "units": "m s-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Dynamic"
+    ]
+  },
+  "wqv": {
+    "attrs": {
+      "long_name": "Surface flux of water vapor",
+      "standard_name": "sfc_flux_water_vapor",
+      "units": "kg m-2 s-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.Surface"
+    ]
+  },
+  "wth": {
+    "attrs": {
+      "long_name": "Surface flux of potential temperature",
+      "standard_name": "sfc_flux_theta",
+      "units": "K kg m-2 s-1"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.Surface"
+    ]
+  },
+  "wv": {
+    "attrs": {
+      "long_name": "Surface flux of v-momentum",
+      "standard_name": "sfc_flux_v_momentum",
+      "units": "kg m-1 s-2"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.Surface"
+    ]
+  },
+  "xc": {
+    "attrs": {
+      "long_name": "x-coordinate of grid cell centers in Cartesian system",
+      "units": "m"
+    },
+    "dims": [
+      "lon"
+    ],
+    "dtype": "float64",
+    "groups": [
+      "C.LandSurface",
+      "C.Surface",
+      "L.Dynamic",
+      "L.Radiation",
+      "L.Thermodynamic",
+      "L.Tracer"
+    ]
+  },
+  "xi": {
+    "attrs": {
+      "long_name": "x-component of vorticity",
+      "standard_name": "x_component_of_vorticity",
+      "units": "s-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Dynamic"
+    ]
+  },
+  "xlai": {
+    "attrs": {
+      "long_name": "leaf area index",
+      "standard_name": "leaf_area_index",
+      "units": "dimensionless"
+    },
+    "dims": [
+      "time",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "C.LandSurface"
+    ]
+  },
+  "yc": {
+    "attrs": {
+      "long_name": "y-coordinate of grid cell centers in Cartesian system",
+      "units": "m"
+    },
+    "dims": [
+      "lat"
+    ],
+    "dtype": "float64",
+    "groups": [
+      "C.LandSurface",
+      "C.Surface",
+      "L.Dynamic",
+      "L.Radiation",
+      "L.Thermodynamic",
+      "L.Tracer"
+    ]
+  },
+  "zb": {
+    "attrs": {
+      "long_name": "vertical height of model interfaces, MSL",
+      "standard_name": "altitude",
+      "units": "m"
+    },
+    "dims": [
+      "lev"
+    ],
+    "dtype": "float64",
+    "groups": [
+      "L.Radiation"
+    ]
+  },
+  "zc": {
+    "attrs": {
+      "long_name": "vertical height of model layers, MSL",
+      "standard_name": "altitude",
+      "units": "m"
+    },
+    "dims": [
+      "lev"
+    ],
+    "dtype": "float64",
+    "groups": [
+      "L.Dynamic",
+      "L.Radiation",
+      "L.Thermodynamic",
+      "L.Tracer"
+    ]
+  },
+  "zeta": {
+    "attrs": {
+      "long_name": "z-component of vorticity",
+      "standard_name": "z_component_of_vorticity",
+      "units": "s-1"
+    },
+    "dims": [
+      "time",
+      "lev",
+      "lat",
+      "lon"
+    ],
+    "dtype": "float32",
+    "groups": [
+      "L.Dynamic"
+    ]
+  }
+}
