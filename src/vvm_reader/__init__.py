@@ -68,6 +68,10 @@ from .core.core_types import (
 from .core.config import (
     KNOWN_GROUPS,
     WIND_VARIABLES,
+    VORTICITY_VARIABLES,
+    STAGGERED_VARIABLES,
+    STAGGER_CONFIG,
+    VARIABLE_GROUP_PRIORITY,
     VERTICAL_DIM,
     TIME_DIM,
 )
@@ -121,6 +125,10 @@ __all__ = [
     # Configuration constants
     'KNOWN_GROUPS',
     'WIND_VARIABLES',
+    'VORTICITY_VARIABLES',
+    'STAGGERED_VARIABLES',
+    'STAGGER_CONFIG',
+    'VARIABLE_GROUP_PRIORITY',
     'VERTICAL_DIM',
     'TIME_DIM',
     

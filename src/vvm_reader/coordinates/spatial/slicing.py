@@ -89,16 +89,16 @@ def compute_regional_slices(
 
 def compute_centering_slices(
     original_slice_info: SliceInfo,
-    needs_u_halo: bool = False,
-    needs_v_halo: bool = False
+    needs_x_halo: bool = False,
+    needs_y_halo: bool = False
 ) -> Tuple[SliceInfo, Dict[str, int]]:
     """
     Compute extended slices for wind centering with halo regions.
 
     Args:
         original_slice_info: Original slice information
-        needs_u_halo: Whether u-wind needs x-direction halo
-        needs_v_halo: Whether v-wind needs y-direction halo
+        needs_x_halo: Whether needs x-direction halo
+        needs_y_halo: Whether needs y-direction halo
 
     Returns:
         Tuple[SliceInfo, Dict[str, int]]: Extended slices and crop offsets
@@ -108,14 +108,14 @@ def compute_centering_slices(
 
     crop_offsets = {"x": 0, "y": 0}
 
-    # Extend x-slice for u-wind centering if needed
-    if (needs_u_halo and not original_slice_info.periodic_x and
+    # Extend x-slice for centering if needed
+    if (needs_x_halo and not original_slice_info.periodic_x and
         x_slice.start is not None and x_slice.start > 0):
         x_slice = slice(x_slice.start - 1, x_slice.stop)
         crop_offsets["x"] = 1
 
-    # Extend y-slice for v-wind centering if needed
-    if (needs_v_halo and not original_slice_info.periodic_y and
+    # Extend y-slice for centering if needed
+    if (needs_y_halo and not original_slice_info.periodic_y and
         y_slice.start is not None and y_slice.start > 0):
         y_slice = slice(y_slice.start - 1, y_slice.stop)
         crop_offsets["y"] = 1

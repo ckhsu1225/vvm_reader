@@ -152,44 +152,84 @@ def filter_files_by_groups(archive_dir: Path, groups: Sequence[str]) -> Dict[str
 # ============================================================================
 
 def resolve_groups_to_load(
-    sim_dir: Path, 
-    requested_groups: Optional[Sequence[str]], 
-    variables: Optional[Sequence[str]], 
+    sim_dir: Path,
+    requested_groups: Optional[Sequence[str]],
+    variables: Optional[Sequence[str]],
     manifest: Optional[Dict] = None
 ) -> List[str]:
     """
     Determine which groups to load based on available groups, requested variables, and manifest.
-    
+
+    Handles variable name disambiguation using priority rules from config.
+
     Args:
         sim_dir: Simulation directory path
         requested_groups: Explicitly requested groups
         variables: Requested variables (used to infer groups from manifest)
         manifest: Variable manifest for group inference
-        
+
     Returns:
         List[str]: Groups to load
     """
     available_groups = list_available_groups(sim_dir)
-    
+
     # If groups explicitly requested, validate and return
     if requested_groups is not None:
         from ..core.exceptions import check_groups_availability
         check_groups_availability(requested_groups, available_groups)
         return list(requested_groups)
-    
+
     # If variables requested and manifest available, infer groups
     if variables is not None and manifest is not None:
+        from ..core.config import (
+            VARIABLE_GROUP_PRIORITY, STAGGERED_VARIABLES,
+            PREFER_3D_FOR_STAGGERED, VERTICAL_DIM
+        )
+
         inferred_groups = []
         for var in variables:
             var_info = manifest.get(var, {})
             var_groups = var_info.get("groups", []) if isinstance(var_info, dict) else []
-            for group in var_groups:
-                if group not in inferred_groups and group in available_groups:
-                    inferred_groups.append(group)
-        
+
+            if not var_groups:
+                continue
+
+            # Apply disambiguation logic
+            selected_group = None
+
+            # Priority 1: Check VARIABLE_GROUP_PRIORITY for explicit rules
+            if var in VARIABLE_GROUP_PRIORITY:
+                priority_list = VARIABLE_GROUP_PRIORITY[var]
+                for priority_group in priority_list:
+                    if priority_group in var_groups and priority_group in available_groups:
+                        selected_group = priority_group
+                        break
+
+            # Priority 2: For staggered variables, prefer 3D groups (with 'lev' dimension)
+            if selected_group is None and var in STAGGERED_VARIABLES and PREFER_3D_FOR_STAGGERED:
+                for group in var_groups:
+                    if group not in available_groups:
+                        continue
+                    # Check if this group's version has 'lev' dimension
+                    var_dims = var_info.get("dims", [])
+                    if VERTICAL_DIM in var_dims:
+                        selected_group = group
+                        break
+
+            # Priority 3: Use first available group
+            if selected_group is None:
+                for group in var_groups:
+                    if group in available_groups:
+                        selected_group = group
+                        break
+
+            # Add selected group to list
+            if selected_group and selected_group not in inferred_groups:
+                inferred_groups.append(selected_group)
+
         if inferred_groups:
             return inferred_groups
-    
+
     # Default: return all available known groups
     return [g for g in available_groups if g in KNOWN_GROUPS]
 

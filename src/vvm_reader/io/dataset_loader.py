@@ -9,7 +9,7 @@ import logging
 import xarray as xr
 from pathlib import Path
 
-from ..core.config import WIND_VARIABLES, TIME_DIM
+from ..core.config import STAGGERED_VARIABLES, TIME_DIM
 from ..core.core_types import LoadParameters
 from ..core.exceptions import (
     NoDataError, validate_simulation_directory
@@ -38,7 +38,7 @@ from ..processing.vertical import (
     crop_vertical_after_centering, ensure_vertical_coordinate_in_meters
 )
 from ..processing.terrain import (
-    apply_terrain_mask, center_staggered_winds
+    apply_terrain_mask, center_staggered_variables
 )
 
 # ============================================================================
@@ -93,8 +93,8 @@ class VVMDatasetLoader:
         # Step 3: Resolve vertical selection
         vertical_slice = resolve_vertical_slice(self.sim_dir, params.vertical_selection)
         
-        # Step 4: Determine if wind centering is needed
-        needs_centering = self._check_wind_centering_needed(
+        # Step 4: Determine if centering is needed
+        needs_centering = self._check_centering_needed(
             params.variables, params.processing_options.center_staggered
         )
         
@@ -102,12 +102,14 @@ class VVMDatasetLoader:
         read_slice_info, crop_offsets = self._compute_read_slices(
             slice_info, needs_centering, params.variables
         )
-        
+
+        # Handle vertical extension for z-staggered variables (w, eta, xi)
+        needs_z_centering = any(
+            needs_centering.get(var, False) and (params.variables is None or var in params.variables)
+            for var in ["w", "eta", "xi"]
+        )
         vertical_read_slice, vertical_crop_offset, vertical_target_length = (
-            extend_vertical_slice_for_centering(
-                vertical_slice, 
-                needs_centering.get("w", False) and params.variables and "w" in params.variables
-            )
+            extend_vertical_slice_for_centering(vertical_slice, needs_z_centering)
         )
         
         # Step 6: Load data from all groups
@@ -141,28 +143,39 @@ class VVMDatasetLoader:
         topo_ds.close()
         return coord_info, sfc_level, terrain_mask
     
-    def _check_wind_centering_needed(self, variables, center_staggered):
-        """Check which wind variables need centering."""
+    def _check_centering_needed(self, variables, center_staggered):
+        """Check which staggered variables need centering (winds and vorticities)."""
         if not center_staggered:
             return {}
-        
+
         needs_centering = {}
         if variables is None:
-            # If no specific variables requested, assume all winds might be present
-            needs_centering = {var: True for var in WIND_VARIABLES}
+            # If no specific variables requested, assume all staggered vars might be present
+            needs_centering = {var: True for var in STAGGERED_VARIABLES}
         else:
-            for var in WIND_VARIABLES:
+            for var in STAGGERED_VARIABLES:
                 needs_centering[var] = var in variables
-        
+
         return needs_centering
     
     def _compute_read_slices(self, slice_info, needs_centering, variables):
         """Compute extended slices for reading with centering halos."""
-        needs_u_halo = needs_centering.get("u", False) and (variables is None or "u" in variables)
-        needs_v_halo = needs_centering.get("v", False) and (variables is None or "v" in variables)
-        
+        # Check if any variable needs x-direction halo
+        # u, zeta, eta need x-halo
+        needs_x_halo = any(
+            needs_centering.get(var, False) and (variables is None or var in variables)
+            for var in ["u", "zeta", "eta"]
+        )
+
+        # Check if any variable needs y-direction halo
+        # v, zeta, xi need y-halo
+        needs_y_halo = any(
+            needs_centering.get(var, False) and (variables is None or var in variables)
+            for var in ["v", "zeta", "xi"]
+        )
+
         return compute_centering_slices(
-            slice_info, needs_u_halo, needs_v_halo
+            slice_info, needs_x_halo, needs_y_halo
         )
     
     def _load_group_datasets(
@@ -283,10 +296,10 @@ class VVMDatasetLoader:
             terrain_mask_final, vertical_slice
         )["mask"]
 
-        # Step 1: Center staggered winds if requested
+        # Step 1: Center staggered variables (winds and vorticities) if requested
         created_center_vars = []
         if params.processing_options.center_staggered and any(needs_centering.values()):
-            dataset, created_center_vars = center_staggered_winds(
+            dataset, created_center_vars = center_staggered_variables(
                 dataset, coord_info, mask_slice,
                 terrain_mask_center,
                 params.processing_options.center_suffix,

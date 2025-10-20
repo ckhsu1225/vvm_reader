@@ -8,8 +8,8 @@ wind centering, and vertical level processing.
 # Terrain processing functions
 from .terrain import (
     apply_terrain_mask,
-    mask_wind_variables_for_centering,
-    center_staggered_winds,
+    mask_staggered_variables_for_centering,
+    center_staggered_variables,
 )
 
 # Vertical level processing functions
@@ -27,8 +27,8 @@ from .vertical import (
 __all__ = [
     # Terrain processing
     "apply_terrain_mask",
-    "mask_wind_variables_for_centering",
-    "center_staggered_winds",
+    "mask_staggered_variables_for_centering",
+    "center_staggered_variables",
     # Vertical level processing
     "read_vertical_levels_from_fort98",
     "resolve_vertical_slice",
