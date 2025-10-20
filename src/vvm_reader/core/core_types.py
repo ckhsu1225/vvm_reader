@@ -234,20 +234,24 @@ class VerticalSelection:
 class ProcessingOptions:
     """
     Data processing options for loading and transformation.
-    
+
     Attributes:
         mask_terrain: Mask values inside terrain
         center_staggered: Center staggered wind variables
         center_suffix: Suffix for centered variables
+        add_terrain_height: Add terrain height (in meters) to dataset
+        add_reference_profiles: Add reference state profiles to dataset
         chunks: Dask chunking configuration
         engine: xarray backend engine
     """
     mask_terrain: bool = True
     center_staggered: bool = True
     center_suffix: str = "_c"
+    add_terrain_height: bool = False
+    add_reference_profiles: bool = False
     chunks: ChunkSetting = "auto"
     engine: Optional[str] = None
-    
+
     def __post_init__(self):
         """Validate processing options."""
         if isinstance(self.chunks, dict):

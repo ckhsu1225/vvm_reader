@@ -13,6 +13,8 @@ from .info import (
     get_terrain_info,
     get_vertical_info,
     get_spatial_info,
+    get_terrain_height,
+    get_reference_profiles,
 )
 
 # Conversion functions
@@ -32,6 +34,8 @@ __all__ = [
     "get_terrain_info",
     "get_vertical_info",
     "get_spatial_info",
+    "get_terrain_height",
+    "get_reference_profiles",
     # Conversion functions
     "convert_coordinates_to_indices",
     "convert_indices_to_coordinates",

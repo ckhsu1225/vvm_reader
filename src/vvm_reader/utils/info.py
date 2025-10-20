@@ -8,8 +8,9 @@ simulation directories, coordinate systems, and terrain data.
 from pathlib import Path
 from typing import Union, List, Dict, Optional
 import numpy as np
+import xarray as xr
 
-from ..core.config import TOPO_VAR
+from ..core.config import TOPO_VAR, VERTICAL_DIM
 from ..core.core_types import Region, CoordinateInfo, SliceInfo
 
 
@@ -258,3 +259,102 @@ def get_spatial_info(coord_info: CoordinateInfo, slice_info: SliceInfo) -> Dict:
         'x_indices': (slice_info.x_slice.start, slice_info.x_slice.stop - 1) if slice_info.x_slice.start is not None else None,
         'y_indices': (slice_info.y_slice.start, slice_info.y_slice.stop - 1) if slice_info.y_slice.start is not None else None,
     }
+
+# ============================================================================
+# Terrain Height and Reference Profiles
+# ============================================================================
+
+def get_terrain_height(sim_dir: Union[str, Path]) -> 'xr.DataArray':
+    """
+    Get terrain height from TOPO.nc in meters.
+    
+    Args:
+        sim_dir: Simulation directory path
+        
+    Returns:
+        xr.DataArray: Terrain height in meters with dims (lat, lon)
+        
+    Example:
+        >>> terrain_h = vvm.get_terrain_height("/path/to/simulation")
+        >>> print(terrain_h.max())  # Maximum terrain height in meters
+    """
+    from ..coordinates.spatial import load_topo_dataset, extract_terrain_height
+    
+    sim_dir = Path(sim_dir)
+    topo_ds = load_topo_dataset(sim_dir)
+    terrain_height = extract_terrain_height(topo_ds)
+    topo_ds.close()
+    
+    return terrain_height
+
+
+def get_reference_profiles(sim_dir: Union[str, Path]) -> 'xr.Dataset':
+    """
+    Get reference state profiles from fort.98.
+    
+    Reads initial state profiles (RHO, THBAR, PBAR, PIBAR, QVBAR) from fort.98
+    and returns them as an xarray Dataset with proper dimensions and attributes.
+    
+    Args:
+        sim_dir: Simulation directory path
+        
+    Returns:
+        xr.Dataset: Reference profiles with variables:
+            - RHO (lev): Density in kg/m³
+            - THBAR (lev): Potential temperature in K
+            - PBAR (lev): Pressure in Pa
+            - PIBAR (lev): Exner function (dimensionless)
+            - QVBAR (lev): Water vapor mixing ratio in kg/kg
+            
+    Example:
+        >>> ref = vvm.get_reference_profiles("/path/to/simulation")
+        >>> print(ref.RHO)  # Density profile
+        >>> print(ref.THBAR)  # Potential temperature profile
+        
+        # Calculate perturbation
+        >>> ds = vvm.open_vvm_dataset(sim_dir, variables=["th"])
+        >>> th_pert = ds.th - ref.THBAR  # Broadcasts automatically
+    """
+    from ..processing.vertical import (
+        read_reference_profiles_from_fort98,
+        read_vertical_levels_from_fort98
+    )
+    
+    sim_dir = Path(sim_dir)
+    
+    # Read profiles and vertical levels
+    profiles_dict = read_reference_profiles_from_fort98(sim_dir)
+    lev_values = read_vertical_levels_from_fort98(sim_dir)
+    
+    # Create coordinate
+    lev_coord = xr.DataArray(
+        lev_values,
+        dims=[VERTICAL_DIM],
+        attrs={'long_name': 'height', 'units': 'm', 'standard_name': 'height'}
+    )
+    
+    # Import reference profile attributes from config
+    from ..core.config import REFERENCE_PROFILE_ATTRS
+
+    # Create dataset with all profiles
+    data_vars = {}
+
+    # Create DataArrays for each profile using centralized attributes
+    for var_name, profile_data in profiles_dict.items():
+        data_vars[var_name] = xr.DataArray(
+            profile_data,
+            dims=[VERTICAL_DIM],
+            attrs=REFERENCE_PROFILE_ATTRS[var_name]
+        )
+    
+    # Create dataset
+    ds = xr.Dataset(
+        data_vars=data_vars,
+        coords={VERTICAL_DIM: lev_coord},
+        attrs={
+            'description': 'Reference state profiles from fort.98',
+            'source': 'VVM initial state'
+        }
+    )
+    
+    return ds

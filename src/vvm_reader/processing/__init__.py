@@ -15,6 +15,7 @@ from .terrain import (
 # Vertical level processing functions
 from .vertical import (
     read_vertical_levels_from_fort98,
+    read_reference_profiles_from_fort98,
     resolve_vertical_slice,
     extend_vertical_slice_for_centering,
     extract_surface_nearest_values,
@@ -31,6 +32,7 @@ __all__ = [
     "center_staggered_variables",
     # Vertical level processing
     "read_vertical_levels_from_fort98",
+    "read_reference_profiles_from_fort98",
     "resolve_vertical_slice",
     "extend_vertical_slice_for_centering",
     "extract_surface_nearest_values",

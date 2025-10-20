@@ -132,7 +132,42 @@ def extract_terrain_mask(topo_ds: xr.Dataset) -> xr.Dataset:
 
     mask = topo_ds[["mask"]].astype(bool)
     da_mask = mask["mask"]
-    
+
     if VERTICAL_DIM not in da_mask.dims or da_mask.ndim != 3:
         raise CoordinateError("TOPO.nc", "Terrain mask must be 3D with a vertical dimension")
     return mask
+
+
+def extract_terrain_height(topo_ds: xr.Dataset) -> xr.DataArray:
+    """
+    Extract terrain height from TOPO.nc and convert from km to meters.
+
+    Args:
+        topo_ds: TOPO dataset
+
+    Returns:
+        xr.DataArray: Terrain height in meters (lat, lon)
+
+    Raises:
+        CoordinateError: If height variable not found or invalid
+    """
+    if "height" not in topo_ds:
+        raise CoordinateError("TOPO.nc", "Terrain height variable 'height' is required")
+
+    height = topo_ds["height"]
+
+    # Validate dimensions
+    if height.ndim != 2:
+        raise CoordinateError("height", f"Expected 2D (lat, lon), got {height.ndim}D")
+
+    # Convert from km to meters
+    height_m = height * 1000.0
+
+    # Update attributes
+    height_m.attrs = dict(height.attrs) if hasattr(height, 'attrs') else {}
+    height_m.attrs['units'] = 'm'
+    height_m.attrs['long_name'] = 'terrain height'
+    height_m.attrs['standard_name'] = 'surface_altitude'
+    height_m.name = 'terrain_height'
+
+    return height_m

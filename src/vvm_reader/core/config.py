@@ -108,6 +108,35 @@ PREFER_3D_FOR_STAGGERED = True
 FORT98_FILENAME = "fort.98"
 FORT98_SEARCH_LINES = 500
 
+# Reference profile variable attributes
+# Used by both get_reference_profiles() and dataset loader integration
+REFERENCE_PROFILE_ATTRS = {
+    'RHO': {
+        'long_name': 'reference state density',
+        'standard_name': 'air_density',
+        'units': 'kg m-3'
+    },
+    'THBAR': {
+        'long_name': 'reference state potential temperature',
+        'standard_name': 'air_potential_temperature',
+        'units': 'K'
+    },
+    'PBAR': {
+        'long_name': 'reference state pressure',
+        'standard_name': 'air_pressure',
+        'units': 'Pa'
+    },
+    'PIBAR': {
+        'long_name': 'reference state Exner function',
+        'units': '1'
+    },
+    'QVBAR': {
+        'long_name': 'reference state water vapor mixing ratio',
+        'standard_name': 'humidity_mixing_ratio',
+        'units': 'kg kg-1'
+    }
+}
+
 # ============================================================================
 # Terrain Processing
 # ============================================================================

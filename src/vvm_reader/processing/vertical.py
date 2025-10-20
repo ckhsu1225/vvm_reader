@@ -19,6 +19,115 @@ from ..core.exceptions import RequiredFileNotFoundError, ParameterError, DataPro
 # ============================================================================
 
 @lru_cache(maxsize=16)
+def read_reference_profiles_from_fort98(sim_dir: Path) -> dict:
+    """
+    Read reference state profiles (RHO, THBAR, PBAR, PIBAR, QVBAR) from fort.98.
+
+    This function caches up to 16 different simulations to avoid repeatedly
+    parsing the same fort.98 file.
+
+    The fort.98 file contains initial state profiles with the format:
+    - Header line: "K, RHO(K),THBAR(K),PBAR(K),PIBAR(K),QVBAR(K)"
+    - Separator line: "="
+    - Data lines: K  RHO  THBAR  PBAR  PIBAR  QVBAR
+
+    Returns profiles for K=1..(Kmax-1), excluding the topmost level
+    to match VVM output dimensions.
+
+    Args:
+        sim_dir: Simulation directory path
+
+    Returns:
+        dict: Dictionary with keys 'RHO', 'THBAR', 'PBAR', 'PIBAR', 'QVBAR'
+              Each value is a numpy array of shape (nz,)
+
+    Raises:
+        RequiredFileNotFoundError: If fort.98 file doesn't exist
+        DataProcessingError: If file format is invalid
+
+    Note:
+        Cache can be cleared with: read_reference_profiles_from_fort98.cache_clear()
+    """
+    fort98_path = sim_dir / FORT98_FILENAME
+
+    if not fort98_path.is_file():
+        raise RequiredFileNotFoundError(fort98_path, "fort.98")
+
+    try:
+        with open(fort98_path, 'r') as f:
+            lines = f.readlines()
+    except Exception as e:
+        raise DataProcessingError("fort.98 reading", f"Cannot read file: {e}")
+
+    # Find the reference profiles header line
+    header_line_idx = None
+    target_header = "K, RHO(K),THBAR(K),PBAR(K),PIBAR(K),QVBAR(K)"
+
+    for i, line in enumerate(lines[:FORT98_SEARCH_LINES]):
+        line_stripped = ' '.join(line.split())
+        if target_header in line_stripped:
+            header_line_idx = i
+            break
+
+    if header_line_idx is None:
+        raise DataProcessingError(
+            "fort.98 parsing",
+            f"Reference profiles header '{target_header}' not found in first {FORT98_SEARCH_LINES} lines"
+        )
+
+    # Parse data lines (skip header and separator line)
+    rho_values = []
+    thbar_values = []
+    pbar_values = []
+    pibar_values = []
+    qvbar_values = []
+    data_start_line = header_line_idx + 2
+
+    for i in range(data_start_line, len(lines)):
+        line = lines[i].strip()
+
+        # Stop at empty line or another separator/header
+        if not line or line.startswith('=') or 'K,' in line:
+            break
+
+        try:
+            tokens = line.split()
+            if len(tokens) < 6:
+                break
+
+            # Parse: K  RHO  THBAR  PBAR  PIBAR  QVBAR
+            rho_values.append(float(tokens[1]))
+            thbar_values.append(float(tokens[2]))
+            pbar_values.append(float(tokens[3]))
+            pibar_values.append(float(tokens[4]))
+            qvbar_values.append(float(tokens[5]))
+        except (ValueError, IndexError) as e:
+            raise DataProcessingError(
+                "fort.98 parsing",
+                f"Invalid reference profile data at line {i+1}: '{line}' - {e}"
+            )
+
+    if not rho_values:
+        raise DataProcessingError("fort.98 parsing", "No valid reference profile values found")
+
+    # Remove the topmost level (not used in model output)
+    if len(rho_values) > 1:
+        rho_values = rho_values[:-1]
+        thbar_values = thbar_values[:-1]
+        pbar_values = pbar_values[:-1]
+        pibar_values = pibar_values[:-1]
+        qvbar_values = qvbar_values[:-1]
+
+    return {
+        'RHO': np.array(rho_values, dtype=np.float64),
+        'THBAR': np.array(thbar_values, dtype=np.float64),
+        'PBAR': np.array(pbar_values, dtype=np.float64),
+        'PIBAR': np.array(pibar_values, dtype=np.float64),
+        'QVBAR': np.array(qvbar_values, dtype=np.float64),
+    }
+
+
+@lru_cache(maxsize=16)
 def read_vertical_levels_from_fort98(sim_dir: Path) -> np.ndarray:
     """
     Read ZT(K) vertical levels from fort.98 file with caching.

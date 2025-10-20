@@ -11,6 +11,7 @@ from .loader import (
     extract_coordinates_from_topo,
     compute_surface_topo_levels,
     extract_terrain_mask,
+    extract_terrain_height,
 )
 
 # Conversion functions
@@ -39,6 +40,7 @@ __all__ = [
     "extract_coordinates_from_topo",
     "compute_surface_topo_levels",
     "extract_terrain_mask",
+    "extract_terrain_height",
     # Conversion functions
     "convert_coordinates_to_indices",
     "convert_indices_to_coordinates",

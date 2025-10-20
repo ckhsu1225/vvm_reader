@@ -9,7 +9,7 @@ import logging
 import xarray as xr
 from pathlib import Path
 
-from ..core.config import STAGGERED_VARIABLES, TIME_DIM
+from ..core.config import STAGGERED_VARIABLES, TIME_DIM, VERTICAL_DIM, REFERENCE_PROFILE_ATTRS
 from ..core.core_types import LoadParameters
 from ..core.exceptions import (
     NoDataError, validate_simulation_directory
@@ -28,14 +28,15 @@ from ..coordinates.time_handler import filter_files_by_time
 
 from ..coordinates.spatial import (
     load_topo_dataset, extract_coordinates_from_topo, compute_surface_topo_levels,
-    extract_terrain_mask, compute_regional_slices, compute_centering_slices, apply_spatial_selection,
+    extract_terrain_mask, extract_terrain_height, compute_regional_slices, compute_centering_slices, apply_spatial_selection,
     crop_dataset_after_centering, assign_spatial_coordinates
 )
 
 from ..processing.vertical import (
     resolve_vertical_slice, extend_vertical_slice_for_centering,
     extract_surface_nearest_values, apply_vertical_selection,
-    crop_vertical_after_centering, ensure_vertical_coordinate_in_meters
+    crop_vertical_after_centering, ensure_vertical_coordinate_in_meters,
+    read_reference_profiles_from_fort98
 )
 from ..processing.terrain import (
     apply_terrain_mask, center_staggered_variables
@@ -140,7 +141,7 @@ class VVMDatasetLoader:
         coord_info = extract_coordinates_from_topo(topo_ds)
         terrain_mask = extract_terrain_mask(topo_ds)
         sfc_level = compute_surface_topo_levels(terrain_mask['mask'])
-        topo_ds.close()
+        self.topo_ds = topo_ds
         return coord_info, sfc_level, terrain_mask
     
     def _check_centering_needed(self, variables, center_staggered):
@@ -355,7 +356,62 @@ class VVMDatasetLoader:
         # Step 7: Ensure time is sorted
         if TIME_DIM in dataset.coords:
             dataset = dataset.sortby(TIME_DIM)
-        
+
+        # Step 8: Add terrain height if requested
+        if params.processing_options.add_terrain_height:
+            try:
+                # Extract terrain height from already-loaded TOPO.nc
+                terrain_height = extract_terrain_height(self.topo_ds)
+
+                # Apply spatial selection to match dataset dimensions
+                if slice_info.x_slice != slice(None) or slice_info.y_slice != slice(None):
+                    terrain_height = terrain_height.isel({
+                        coord_info.y_dim: slice_info.y_slice,
+                        coord_info.x_dim: slice_info.x_slice
+                    })
+
+                dataset['terrain_height'] = terrain_height
+                logger.info("Added terrain_height to dataset")
+            except Exception as e:
+                logger.warning("Failed to add terrain_height: %s", e)
+
+        # Step 9: Add reference profiles if requested
+        if params.processing_options.add_reference_profiles:
+            try:
+                ref_profiles = read_reference_profiles_from_fort98(self.sim_dir)
+
+                # Check if dataset has vertical dimension
+                if VERTICAL_DIM in dataset.dims:
+                    # Apply vertical slice to reference profiles to match dataset levels
+                    for var_name, profile_data in ref_profiles.items():
+                        # Apply the same vertical slice that was used for the data
+                        if vertical_slice is not None:
+                            sliced_profile = profile_data[vertical_slice]
+                        else:
+                            sliced_profile = profile_data
+
+                        # Verify the sliced profile matches dataset vertical dimension
+                        if VERTICAL_DIM in dataset.coords:
+                            lev_coord = dataset.coords[VERTICAL_DIM]
+                            if len(sliced_profile) != len(lev_coord):
+                                logger.warning(
+                                    "Reference profile %s length (%d) does not match dataset levels (%d). Skipping.",
+                                    var_name, len(sliced_profile), len(lev_coord)
+                                )
+                                continue
+
+                        # Add with proper attributes from centralized config
+                        dataset[var_name] = (VERTICAL_DIM, sliced_profile, REFERENCE_PROFILE_ATTRS[var_name])
+
+                    logger.info("Added reference profiles to dataset: %s", list(ref_profiles.keys()))
+                else:
+                    logger.warning(
+                        "Cannot add reference profiles: dataset has no vertical dimension '%s'",
+                        VERTICAL_DIM
+                    )
+            except Exception as e:
+                logger.warning("Failed to add reference profiles: %s", e)
+
         return dataset
 
 # ============================================================================
