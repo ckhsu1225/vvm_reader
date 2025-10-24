@@ -91,6 +91,13 @@ from .core.exceptions import (
 # Import logging configuration
 from .core.logging_config import setup_logging, set_log_level
 
+# Import diagnostics module
+from . import diagnostics
+from .diagnostics import (
+    compute_diagnostics,
+    list_available_diagnostics,
+)
+
 # Define what gets imported with "from vvm_reader import *"
 __all__ = [
     # Version info
@@ -147,6 +154,11 @@ __all__ = [
     # Logging configuration
     'setup_logging',
     'set_log_level',
+
+    # Diagnostics
+    'diagnostics',
+    'compute_diagnostics',
+    'list_available_diagnostics',
 ]
 
 # Package metadata

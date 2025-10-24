@@ -94,7 +94,7 @@ def extract_coordinates_from_topo(topo_ds: xr.Dataset) -> CoordinateInfo:
     )
 
 
-def compute_surface_topo_levels(terrain_mask: xr.DataArray) -> xr.Dataset:
+def compute_surface_topo_levels(terrain_mask: xr.DataArray) -> xr.DataArray:
     """
     Compute the surface topography levels from the terrain mask.
 
@@ -102,7 +102,7 @@ def compute_surface_topo_levels(terrain_mask: xr.DataArray) -> xr.Dataset:
         terrain_mask: 3D terrain mask array from TOPO.nc
 
     Returns:
-        xr.Dataset: Surface topography levels
+        xr.DataArray: Surface topography levels
     """
     if terrain_mask is None:
         raise CoordinateError("TOPO.nc", "Terrain mask variable 'mask' is required")
@@ -111,13 +111,12 @@ def compute_surface_topo_levels(terrain_mask: xr.DataArray) -> xr.Dataset:
         raise CoordinateError("TOPO.nc", "Terrain mask must be 3D with a vertical dimension")
 
     mask_bool = terrain_mask.astype(bool)
-    surface_level = xr.Dataset(
-        {"surface_level": (~mask_bool).sum(dim=VERTICAL_DIM)}
-    )
+    surface_level = (~mask_bool).sum(dim=VERTICAL_DIM)
+    surface_level.name = "surface_level"
     return surface_level
 
 
-def extract_terrain_mask(topo_ds: xr.Dataset) -> xr.Dataset:
+def extract_terrain_mask(topo_ds: xr.Dataset) -> xr.DataArray:
     """
     Extract the 3D terrain mask from TOPO.nc.
 
@@ -125,15 +124,13 @@ def extract_terrain_mask(topo_ds: xr.Dataset) -> xr.Dataset:
         topo_ds: TOPO dataset
 
     Returns:
-        xr.Dataset: 3D terrain mask
+        xr.DataArray: 3D terrain mask
     """
     if "mask" not in topo_ds:
         raise CoordinateError("TOPO.nc", "Terrain mask variable 'mask' is required")
 
-    mask = topo_ds[["mask"]].astype(bool)
-    da_mask = mask["mask"]
-
-    if VERTICAL_DIM not in da_mask.dims or da_mask.ndim != 3:
+    mask = topo_ds["mask"].astype(bool)
+    if VERTICAL_DIM not in mask.dims or mask.ndim != 3:
         raise CoordinateError("TOPO.nc", "Terrain mask must be 3D with a vertical dimension")
     return mask
 

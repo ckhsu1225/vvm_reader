@@ -9,7 +9,7 @@ import logging
 import xarray as xr
 from pathlib import Path
 
-from ..core.config import STAGGERED_VARIABLES, TIME_DIM, VERTICAL_DIM, REFERENCE_PROFILE_ATTRS
+from ..core.config import STAGGERED_VARIABLES, TIME_DIM, VERTICAL_DIM
 from ..core.core_types import LoadParameters
 from ..core.exceptions import (
     NoDataError, validate_simulation_directory
@@ -35,8 +35,7 @@ from ..coordinates.spatial import (
 from ..processing.vertical import (
     resolve_vertical_slice, extend_vertical_slice_for_centering,
     extract_surface_nearest_values, apply_vertical_selection,
-    crop_vertical_after_centering, ensure_vertical_coordinate_in_meters,
-    read_reference_profiles_from_fort98
+    crop_vertical_after_centering, ensure_vertical_coordinate_in_meters
 )
 from ..processing.terrain import (
     apply_terrain_mask, center_staggered_variables
@@ -140,7 +139,7 @@ class VVMDatasetLoader:
         topo_ds = load_topo_dataset(self.sim_dir, engine)
         coord_info = extract_coordinates_from_topo(topo_ds)
         terrain_mask = extract_terrain_mask(topo_ds)
-        sfc_level = compute_surface_topo_levels(terrain_mask['mask'])
+        sfc_level = compute_surface_topo_levels(terrain_mask)
         self.topo_ds = topo_ds
         return coord_info, sfc_level, terrain_mask
     
@@ -288,14 +287,10 @@ class VVMDatasetLoader:
         mask_slice = read_slice_info if read_slice_info is not None else slice_info
 
         terrain_mask_center = apply_spatial_selection(terrain_mask, coord_info, mask_slice)
-        terrain_mask_center = apply_vertical_selection(
-            terrain_mask_center, vertical_read_slice
-        )["mask"]
+        terrain_mask_center = apply_vertical_selection(terrain_mask_center, vertical_read_slice)
 
         terrain_mask_final = apply_spatial_selection(terrain_mask, coord_info, slice_info)
-        terrain_mask_final = apply_vertical_selection(
-            terrain_mask_final, vertical_slice
-        )["mask"]
+        terrain_mask_final = apply_vertical_selection(terrain_mask_final, vertical_slice)
 
         # Step 1: Center staggered variables (winds and vorticities) if requested
         created_center_vars = []
@@ -323,9 +318,7 @@ class VVMDatasetLoader:
 
         # Step 3: Apply terrain masking
         if params.processing_options.mask_terrain:
-            dataset = apply_terrain_mask(
-                dataset, terrain_mask_final
-            )
+            dataset = apply_terrain_mask(dataset, terrain_mask_final)
 
         # Step 4: Assign spatial coordinates
         dataset = assign_spatial_coordinates(dataset, coord_info, slice_info)
@@ -333,9 +326,7 @@ class VVMDatasetLoader:
 
         # Step 5: Extract surface values if requested
         if params.vertical_selection.surface_nearest:
-            sfc_level = apply_spatial_selection(
-                sfc_level, coord_info, slice_info
-            )["surface_level"]
+            sfc_level = apply_spatial_selection(sfc_level, coord_info, slice_info)
             dataset = extract_surface_nearest_values(
                 dataset, sfc_level, params.vertical_selection
             )
@@ -365,10 +356,7 @@ class VVMDatasetLoader:
 
                 # Apply spatial selection to match dataset dimensions
                 if slice_info.x_slice != slice(None) or slice_info.y_slice != slice(None):
-                    terrain_height = terrain_height.isel({
-                        coord_info.y_dim: slice_info.y_slice,
-                        coord_info.x_dim: slice_info.x_slice
-                    })
+                    terrain_height = apply_spatial_selection(terrain_height, coord_info, slice_info)
 
                 dataset['terrain_height'] = terrain_height
                 logger.info("Added terrain_height to dataset")
@@ -378,39 +366,50 @@ class VVMDatasetLoader:
         # Step 9: Add reference profiles if requested
         if params.processing_options.add_reference_profiles:
             try:
-                ref_profiles = read_reference_profiles_from_fort98(self.sim_dir)
+                from ..utils.info import get_reference_profiles
 
-                # Check if dataset has vertical dimension
-                if VERTICAL_DIM in dataset.dims:
-                    # Apply vertical slice to reference profiles to match dataset levels
-                    for var_name, profile_data in ref_profiles.items():
-                        # Apply the same vertical slice that was used for the data
-                        if vertical_slice is not None:
-                            sliced_profile = profile_data[vertical_slice]
-                        else:
-                            sliced_profile = profile_data
+                # Get reference profiles as xr.Dataset with lev coordinates
+                ref_profiles_ds = get_reference_profiles(self.sim_dir)
 
-                        # Verify the sliced profile matches dataset vertical dimension
-                        if VERTICAL_DIM in dataset.coords:
-                            lev_coord = dataset.coords[VERTICAL_DIM]
-                            if len(sliced_profile) != len(lev_coord):
-                                logger.warning(
-                                    "Reference profile %s length (%d) does not match dataset levels (%d). Skipping.",
-                                    var_name, len(sliced_profile), len(lev_coord)
-                                )
-                                continue
+                # Check if dataset has vertical dimension and coordinate
+                if VERTICAL_DIM in dataset.dims and VERTICAL_DIM in dataset.coords:
+                    try:
+                        # Align profiles to dataset's vertical coordinate using xarray
+                        # This handles vertical subset automatically based on lev values
+                        ref_profiles_aligned = ref_profiles_ds.sel(
+                            lev=dataset[VERTICAL_DIM],
+                            method='nearest',
+                            tolerance=1.0  # Allow ±1m tolerance for floating point errors
+                        )
 
-                        # Add with proper attributes from centralized config
-                        dataset[var_name] = (VERTICAL_DIM, sliced_profile, REFERENCE_PROFILE_ATTRS[var_name])
+                        # Replace the lev coordinate with dataset's lev to ensure exact match
+                        # This prevents NaN values due to floating point differences
+                        ref_profiles_aligned = ref_profiles_aligned.assign_coords(
+                            {VERTICAL_DIM: dataset[VERTICAL_DIM]}
+                        )
 
-                    logger.info("Added reference profiles to dataset: %s", list(ref_profiles.keys()))
+                        # Add aligned profiles to dataset
+                        for var_name in ref_profiles_aligned.data_vars:
+                            dataset[var_name] = ref_profiles_aligned[var_name]
+
+                        logger.info(
+                            "Added reference profiles to dataset: %s (aligned to %d levels: %.1f-%.1f m)",
+                            list(ref_profiles_aligned.data_vars),
+                            len(dataset[VERTICAL_DIM]),
+                            float(dataset[VERTICAL_DIM].values[0]),
+                            float(dataset[VERTICAL_DIM].values[-1])
+                        )
+
+                    except Exception as e:
+                        logger.warning("Failed to align reference profiles: %s", e)
                 else:
                     logger.warning(
-                        "Cannot add reference profiles: dataset has no vertical dimension '%s'",
+                        "Cannot add reference profiles: dataset missing vertical dimension or coordinate '%s'",
                         VERTICAL_DIM
                     )
+
             except Exception as e:
-                logger.warning("Failed to add reference profiles: %s", e)
+                logger.warning("Failed to load reference profiles: %s", e)
 
         return dataset
 
