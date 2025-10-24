@@ -50,29 +50,36 @@ def open_vvm_dataset(
     vertical_selection: Optional[VerticalSelection] = None,
     processing_options: Optional[ProcessingOptions] = None,
     var_manifest: Optional[Union[str, Path, dict]] = None,
+    auto_compute_diagnostics: bool = True,
 ) -> xr.Dataset:
     """
     Load VVM dataset with structured parameters.
 
     This is the main interface for loading VVM data using structured parameter objects
-    for better organization and type safety.
+    for better organization and type safety. Automatically computes diagnostic variables
+    when requested in the variables list.
 
     Args:
         sim_dir: Path to simulation directory
         groups: Output groups to load (e.g., ["L.Dynamic", "L.Radiation"])
-        variables: Specific variables to load
+        variables: Specific variables to load (can include both file and diagnostic variables)
         region: Spatial region selection
         time_selection: Time selection parameters
         vertical_selection: Vertical level selection parameters
         processing_options: Data processing options
         var_manifest: Variable manifest (path, dict, or None for auto-load)
+        auto_compute_diagnostics: Automatically compute diagnostic variables (default: True)
+            Set to False to disable automatic computation and compute manually later.
 
     Returns:
         xr.Dataset: Loaded and processed VVM dataset
 
     Examples:
-        # Load all data
-        >>> ds = open_vvm_dataset("/path/to/sim")
+        # Load file and diagnostic variables together (automatic computation)
+        >>> ds = open_vvm_dataset(
+        ...     "/path/to/sim",
+        ...     variables=["th", "qv", "T", "RH", "MSE"]  # T, RH, MSE auto-computed
+        ... )
 
         # Load specific variables with spatial/temporal selection
         >>> region = Region(lon_range=(120, 122), lat_range=(23, 25))
@@ -84,19 +91,56 @@ def open_vvm_dataset(
         ...     time_selection=time_sel
         ... )
 
-        # Load with index-based selection
-        >>> region = Region(x_range=(100, 200), y_range=(50, 150))
-        >>> vert_sel = VerticalSelection(index_range=(5, 25))
+        # Disable automatic diagnostic computation (manual control)
         >>> ds = open_vvm_dataset(
         ...     "/path/to/sim",
-        ...     region=region,
-        ...     vertical_selection=vert_sel
+        ...     variables=["th", "qv"],
+        ...     auto_compute_diagnostics=False
         ... )
+        >>> ds = vvm.compute_diagnostics(ds, ["T", "RH"], sim_dir)
     """
-    # Create parameter object with defaults
+    sim_path = Path(sim_dir)
+
+    # Separate file variables and diagnostic variables
+    file_vars = variables
+    diag_vars = []
+
+    if variables and auto_compute_diagnostics:
+        try:
+            from .diagnostics import separate_file_and_diagnostic_variables, get_required_file_variables
+
+            file_vars, diag_vars = separate_file_and_diagnostic_variables(variables)
+
+            if diag_vars:
+                # Get file variables required by diagnostic variables
+                required_file_vars = get_required_file_variables(diag_vars)
+
+                # Combine user-requested file vars with required file vars
+                all_file_vars = list(file_vars | required_file_vars)
+
+                logger.info(
+                    "Diagnostic variables requested: %s", diag_vars
+                )
+                logger.debug(
+                    "Auto-loading required file variables: %s", required_file_vars
+                )
+
+                file_vars = all_file_vars
+        except ImportError:
+            logger.warning("Diagnostics module not available, skipping diagnostic computation")
+            diag_vars = []
+        except Exception as e:
+            logger.warning(
+                "Failed to separate diagnostic variables: %s. "
+                "Set auto_compute_diagnostics=False to disable.",
+                e
+            )
+            diag_vars = []
+
+    # Create parameter object with file variables only
     params = LoadParameters(
         groups=groups,
-        variables=variables,
+        variables=file_vars,
         region=region or Region(),
         time_selection=time_selection or TimeSelection(),
         vertical_selection=vertical_selection or VerticalSelection(),
@@ -104,7 +148,30 @@ def open_vvm_dataset(
         var_manifest=var_manifest
     )
 
-    return load_vvm_dataset(Path(sim_dir), params)
+    # Load file variables
+    ds = load_vvm_dataset(sim_path, params)
+
+    # Compute diagnostic variables if requested
+    if diag_vars and auto_compute_diagnostics:
+        try:
+            from .diagnostics import compute_diagnostics
+
+            logger.info("Computing diagnostic variables: %s", diag_vars)
+            ds = compute_diagnostics(ds, diag_vars, sim_path)
+
+        except Exception as e:
+            logger.error(
+                "Failed to compute diagnostic variables %s: %s",
+                diag_vars, e
+            )
+            logger.info(
+                "Suggestion: Set auto_compute_diagnostics=False and compute manually using "
+                "vvm.compute_diagnostics(ds, %s, sim_dir)",
+                diag_vars
+            )
+            raise
+
+    return ds
 
 
 # ============================================================================

@@ -242,8 +242,8 @@ def list_available_diagnostics() -> List[str]:
     Example:
         >>> diagnostics = list_available_diagnostics()
         >>> print(diagnostics)
-        ['CAPE', 'CIN', 'CWV', 'DSE', 'IWP', 'LWP', 'MSE', 'MSE_s',
-         'PV', 'RH', 'T', 'T_v', 'qvs', 'theta_e', 'theta_es', 'theta_v']
+        ['CWV', 'DSE', 'IWP', 'LWP', 'MSE', 'MSE_s',
+         'RH', 'T', 'T_v', 'qvs', 'theta_e', 'theta_es', 'theta_v']
     """
     registry = get_registry()
     return registry.list_all()

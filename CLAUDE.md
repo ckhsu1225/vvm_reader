@@ -34,7 +34,7 @@ uv pip install -e .
 
 ### Module Organization
 
-The codebase is organized into four main subsystems:
+The codebase is organized into five main subsystems:
 
 1. **Core** (`src/vvm_reader/core/`): Type definitions and configuration
    - `core_types.py`: Dataclass-based parameter types (`Region`, `TimeSelection`, `VerticalSelection`, `ProcessingOptions`)
@@ -54,17 +54,28 @@ The codebase is organized into four main subsystems:
    - `terrain.py`: Terrain masking and wind centering on staggered grids
    - `vertical.py`: Vertical level selection, surface extraction, fort.98 parsing
 
+5. **Diagnostics** (`src/vvm_reader/diagnostics/`): Derived variable computation
+   - `registry.py`: Diagnostic variable registry with automatic dependency resolution
+   - `compute.py`: Main computation engine with topological sorting
+   - `thermodynamics.py`: Temperature and thermodynamic variables (T, T_v, theta_v, theta_e, theta_es)
+   - `moisture.py`: Moisture diagnostics (RH, qvs, CWV, LWP, IWP)
+   - `energetics.py`: Energy diagnostics (DSE, MSE, MSE_s)
+   - `constants.py`: Physical constants for atmospheric computations
+
 ### Data Flow
 
-The main data loading pipeline (`VVMDatasetLoader.load_dataset()`) follows these steps:
+The main data loading pipeline (`open_vvm_dataset()` → `VVMDatasetLoader.load_dataset()`) follows these steps:
 
-1. **Parameter Resolution**: Load variable manifest, resolve which groups contain requested variables
-2. **Coordinate Setup**: Load TOPO.nc to extract coordinate system and terrain information
-3. **Spatial Selection**: Compute slicing information for regional selection (coordinate-based or index-based)
-4. **Vertical Selection**: Resolve vertical levels from fort.98 or use index ranges
-5. **File Filtering**: Filter NetCDF files by group and optionally by time range
-6. **Data Loading**: Load data with spatial/vertical slicing applied
-7. **Post-Processing**: Apply terrain masking, center staggered winds, extract surface values
+1. **Variable Separation** (if `auto_compute_diagnostics=True`): Separate file variables from diagnostic variables
+2. **Dependency Resolution**: Automatically add required file variables for diagnostics
+3. **Parameter Resolution**: Load variable manifest, resolve which groups contain requested variables
+4. **Coordinate Setup**: Load TOPO.nc to extract coordinate system and terrain information
+5. **Spatial Selection**: Compute slicing information for regional selection (coordinate-based or index-based)
+6. **Vertical Selection**: Resolve vertical levels from fort.98 or use index ranges
+7. **File Filtering**: Filter NetCDF files by group and optionally by time range
+8. **Data Loading**: Load data with spatial/vertical slicing applied
+9. **Post-Processing**: Apply terrain masking, center staggered winds, extract surface values
+10. **Diagnostic Computation** (if requested): Compute derived variables using loaded data and reference profiles
 
 ### Key Design Patterns
 
@@ -79,6 +90,18 @@ The main data loading pipeline (`VVMDatasetLoader.load_dataset()`) follows these
 **Two-Pass Processing**: Wind centering on staggered grids requires reading extra grid points, then cropping after centering. The loader handles this automatically through `compute_read_slices()` and `crop_dataset_after_centering()`.
 
 **Terrain-Following Coordinates**: VVM uses terrain-following vertical coordinates where `k <= topo` indicates points inside terrain. The package handles this through automatic masking and surface extraction.
+
+**Automatic Diagnostic Computation**: The API can automatically compute diagnostic variables when requested in the variables list. This is implemented through:
+- Variable separation (file vs diagnostic)
+- Dependency resolution (automatically load required file variables)
+- Registry-based computation (topological sort ensures correct order)
+- Users can disable with `auto_compute_diagnostics=False` for manual control
+
+**Registry System**: Diagnostic variables are registered with their dependencies (file variables, profiles, other diagnostics). The registry:
+- Prevents circular dependencies
+- Computes variables in correct order via topological sort
+- Caches results to avoid redundant computation
+- Validates that all dependencies are available
 
 ## VVM-Specific Details
 
@@ -123,6 +146,28 @@ When adding features to the API:
 4. Implement core logic in appropriate module (io/, coordinates/, processing/)
 5. Expose through convenience functions in `main.py`
 6. Update `__init__.py` exports
+
+### Adding New Diagnostic Variables
+
+To add a new diagnostic variable:
+1. Choose the appropriate module (`thermodynamics.py`, `moisture.py`, `energetics.py`, or create new)
+2. Use the `@register_diagnostic` decorator:
+   ```python
+   @register_diagnostic(
+       name='new_var',
+       file_dependencies=['th', 'qv'],
+       profile_dependencies=['PIBAR'],
+       diagnostic_dependencies=['T'],
+       long_name='New Variable',
+       units='unit',
+       description='Description'
+   )
+   def compute_new_variable(ds, profiles, diagnostics):
+       # Implementation
+       return result
+   ```
+3. The registry automatically handles dependency resolution and computation order
+4. Export the function in the module's `__all__` list
 
 ### Coordinate Conversions
 
@@ -175,3 +220,44 @@ This project runs on an HPC system with:
 - Python 3.13 via `.python-version`
 
 The environment modules are loaded via shell configuration, so commands may show module loading messages which can be ignored.
+
+## Experimental Features and Git Branches
+
+### Main Branch (`master`)
+The main branch contains **stable, production-ready features**:
+- Complete I/O pipeline with terrain masking and wind centering
+- Diagnostic variables: 13 stable variables (thermodynamics, moisture, energy)
+- Automatic diagnostic computation integrated into `open_vvm_dataset()`
+- Full test coverage for core functionality
+
+### Feature Branch: `feature/experimental-diagnostics`
+Contains **experimental diagnostic variables** not ready for production:
+- **CAPE/CIN**: Surface-based CAPE and CIN using MSE conservation iteration
+  - Handles time dimension via manual loop
+  - Includes numerical stability protections
+  - Status: Works but needs validation and refinement
+- **Potential Vorticity (PV)**: Ertel potential vorticity computation
+  - Status: Implemented but not thoroughly tested
+
+To work with experimental features:
+```bash
+# Switch to experimental branch
+git checkout feature/experimental-diagnostics
+
+# Or create a new branch from it
+git checkout -b my-experiment feature/experimental-diagnostics
+```
+
+**Why separate branches?**
+- Keep main branch stable and reliable
+- Allow continued development of complex features
+- Easy to merge back when ready
+- Clear separation of stable vs experimental code
+
+### Adding Experimental Features
+When implementing complex/experimental features:
+1. Create a feature branch from `master`
+2. Implement and test thoroughly
+3. Document any known issues or limitations
+4. Merge to `master` only when stable and validated
+5. Update this document to reflect the merge
