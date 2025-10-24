@@ -5,8 +5,9 @@ A Python package for efficiently reading and processing VVM (Vector Vorticity eq
 ## Features
 
 - **Structured Parameter Interface**: Clean, type-safe API with organized parameter classes
+- **Diagnostic Variable Computation**: Automatic computation of derived atmospheric variables (temperature, humidity, energy, etc.)
 - **Flexible Spatial Selection**: Support both coordinate-based (lon/lat) and index-based (x/y) selection
-- **Smart Time Selection**: Choose by datetime or file indices for optimal performance  
+- **Smart Time Selection**: Choose by datetime or file indices for optimal performance
 - **Intelligent Vertical Selection**: Select by height or level indices with automatic fort.98 integration
 - **Automatic Terrain Processing**: Built-in terrain masking and surface extraction
 - **Wind Field Centering**: Automatic centering of staggered wind variables
@@ -31,9 +32,32 @@ ds = vvm.open_vvm_dataset("/path/to/simulation")
 
 # Load specific variables
 ds = vvm.open_vvm_dataset(
-    "/path/to/simulation", 
+    "/path/to/simulation",
     variables=["u", "v", "w", "th"]
 )
+```
+
+### Diagnostic Variables
+
+```python
+# Automatically compute diagnostic variables
+ds = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    variables=["th", "qv", "T", "RH", "MSE"]  # T, RH, MSE auto-computed
+)
+
+# Available diagnostic variables:
+# Thermodynamics: T, T_v, theta_v, theta_e, theta_es
+# Moisture: RH, qvs, CWV, LWP, IWP
+# Energy: DSE, MSE, MSE_s
+
+# Manual control (advanced)
+ds = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    variables=["th", "qv"],
+    auto_compute_diagnostics=False
+)
+ds = vvm.compute_diagnostics(ds, ["T", "RH"], "/path/to/simulation")
 ```
 
 ### Regional Selection
@@ -301,8 +325,14 @@ Examples:
 - `quick_load()`: Fast loading for common cases
 - `load_surface_data()`: Surface data with automatic vertical range detection
 - `load_region()`: Regional data loading
-- `load_indices()`: Index-based regional loading  
+- `load_indices()`: Index-based regional loading
 - `load_time_series()`: Time series analysis
+
+### Diagnostic Functions
+
+- `compute_diagnostics()`: Compute diagnostic variables from loaded data
+- `list_available_diagnostics()`: List all available diagnostic variables
+- `get_diagnostic_metadata()`: Get metadata for a diagnostic variable
 
 ### Parameter Classes
 
@@ -320,6 +350,31 @@ Examples:
 - `list_available_simulations()`: Find simulations in a directory
 
 ## Examples
+
+### Diagnostic Variable Analysis
+
+```python
+# Compute thermodynamic diagnostics
+ds = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    variables=["th", "qv", "T", "theta_e", "RH"],
+    region=vvm.Region(lon_range=(120, 122), lat_range=(23, 25))
+)
+
+# Access computed variables
+temperature = ds['T']  # Temperature [K]
+theta_e = ds['theta_e']  # Equivalent potential temperature [K]
+rh = ds['RH']  # Relative humidity [%]
+
+# Compute column-integrated variables
+ds_column = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    variables=["qv", "qc", "qr", "CWV", "LWP"]
+)
+
+print(f"Column water vapor: {ds_column['CWV'].mean():.2f} kg/m²")
+print(f"Liquid water path: {ds_column['LWP'].mean():.2f} kg/m²")
+```
 
 ### Multi-Regional Analysis
 
