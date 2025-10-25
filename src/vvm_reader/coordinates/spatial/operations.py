@@ -86,7 +86,7 @@ def assign_spatial_coordinates(
     slice_info: SliceInfo
 ) -> xr.Dataset:
     """
-    Assign lon/lat coordinates to dataset.
+    Assign lon/lat coordinates to dataset, and preserve xc/yc if present.
 
     Args:
         dataset: Input dataset
@@ -109,7 +109,17 @@ def assign_spatial_coordinates(
     if coord_info.lat_attrs:
         lat_coord.attrs.update(coord_info.lat_attrs)
 
-    return dataset.assign_coords({
+    # Prepare coordinate dictionary
+    new_coords = {
         LON_DIM: lon_coord,
         LAT_DIM: lat_coord
-    })
+    }
+
+    # Preserve xc, yc if they exist in the dataset (from VVM nc files)
+    # These are Cartesian coordinates in meters, useful for distance calculations
+    if 'xc' in dataset.coords:
+        new_coords['xc'] = dataset.coords['xc']
+    if 'yc' in dataset.coords:
+        new_coords['yc'] = dataset.coords['yc']
+
+    return dataset.assign_coords(new_coords)

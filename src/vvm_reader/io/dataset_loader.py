@@ -256,6 +256,16 @@ class VVMDatasetLoader:
                 engine=processing_options.engine
             )
 
+            # Convert xc, yc from data_vars to coordinates if present
+            # These are Cartesian coordinates in meters from VVM output files
+            coords_to_promote = {}
+            for coord_name in ['xc', 'yc']:
+                if coord_name in ds.data_vars:
+                    coords_to_promote[coord_name] = ds[coord_name]
+
+            if coords_to_promote:
+                ds = ds.set_coords(list(coords_to_promote.keys()))
+
             # Filter variables if specified
             if keep_vars is not None:
                 present_vars = [v for v in keep_vars if v in ds.data_vars]
