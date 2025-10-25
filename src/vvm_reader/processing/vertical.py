@@ -308,29 +308,33 @@ def extract_surface_nearest_values(
 ) -> xr.Dataset:
     """
     Extract surface-nearest values for 3D variables.
-    
+
     For each horizontal grid point, extracts the value at vertical level = topo + 1
     (the first level above terrain).
-    
+
     Args:
         dataset: Input dataset
         surface_level: surface-nearest level indices
         vertical_selection: Vertical selection parameters
-        
+
     Returns:
         xr.Dataset: Dataset with surface values added or replaced
+
+    Note:
+        When surface_only=True, the surface_level indices are saved as
+        'surface_level_index' in the dataset for diagnostic variable computation.
     """
     if not vertical_selection.surface_nearest or VERTICAL_DIM not in dataset.sizes:
         return dataset
-    
+
     try:
         # Convert topo to integer indices
         sfc_indices = surface_level.astype(np.int64)
-        
+
         if vertical_selection.surface_only:
             # Replace 3D variables with surface values (remove vertical dimension)
             new_data_vars = {}
-            
+
             for name, var in dataset.data_vars.items():
                 if VERTICAL_DIM in var.sizes:
                     try:
@@ -343,7 +347,17 @@ def extract_surface_nearest_values(
                         new_data_vars[name] = var
                 else:
                     new_data_vars[name] = var
-            
+
+            # Save surface level indices for diagnostic computation
+            # This allows diagnostics to select the correct profile values
+            sfc_indices_var = sfc_indices.copy()
+            sfc_indices_var.attrs = {
+                'long_name': 'surface level index',
+                'description': 'Vertical level index used for surface extraction (k = topo + 1)',
+                'units': 'level'
+            }
+            new_data_vars['surface_level_index'] = sfc_indices_var
+
             return dataset.assign(new_data_vars)
         
         else:
@@ -398,7 +412,7 @@ def validate_vertical_selection(
     
     if vertical_selection.height_range is not None:
         z0, z1 = vertical_selection.height_range
-        if z0 < 0:
+        if z0 < 0 or z1 < 0:
             raise ParameterError("height_range", str(vertical_selection.height_range),
                                "Heights must be non-negative")
 

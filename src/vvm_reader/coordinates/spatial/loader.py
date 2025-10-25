@@ -98,11 +98,15 @@ def compute_surface_topo_levels(terrain_mask: xr.DataArray) -> xr.DataArray:
     """
     Compute the surface topography levels from the terrain mask.
 
+    Performance note: This function keeps the computation lazy. The actual
+    data loading and computation will be deferred until the surface_level
+    is accessed, and only after spatial slicing has been applied.
+
     Args:
-        terrain_mask: 3D terrain mask array from TOPO.nc
+        terrain_mask: 3D terrain mask array from TOPO.nc (may be lazy)
 
     Returns:
-        xr.DataArray: Surface topography levels
+        xr.DataArray: Surface topography levels (lazy computation)
     """
     if terrain_mask is None:
         raise CoordinateError("TOPO.nc", "Terrain mask variable 'mask' is required")
@@ -110,6 +114,8 @@ def compute_surface_topo_levels(terrain_mask: xr.DataArray) -> xr.DataArray:
     if VERTICAL_DIM not in terrain_mask.dims or terrain_mask.ndim != 3:
         raise CoordinateError("TOPO.nc", "Terrain mask must be 3D with a vertical dimension")
 
+    # Keep computation lazy - astype(bool) and sum() will be deferred
+    # This allows xarray to optimize the computation after spatial slicing
     mask_bool = terrain_mask.astype(bool)
     surface_level = (~mask_bool).sum(dim=VERTICAL_DIM)
     surface_level.name = "surface_level"
@@ -120,16 +126,23 @@ def extract_terrain_mask(topo_ds: xr.Dataset) -> xr.DataArray:
     """
     Extract the 3D terrain mask from TOPO.nc.
 
+    Performance note: Returns the mask without type conversion to keep it lazy.
+    The astype(bool) conversion will be deferred until after spatial slicing,
+    which significantly reduces memory and loading time.
+
     Args:
         topo_ds: TOPO dataset
 
     Returns:
-        xr.DataArray: 3D terrain mask
+        xr.DataArray: 3D terrain mask (lazy, not yet converted to bool)
     """
     if "mask" not in topo_ds:
         raise CoordinateError("TOPO.nc", "Terrain mask variable 'mask' is required")
 
-    mask = topo_ds["mask"].astype(bool)
+    # Keep mask lazy - don't convert to bool yet
+    # This allows xarray to defer loading until after spatial/vertical slicing
+    mask = topo_ds["mask"]
+
     if VERTICAL_DIM not in mask.dims or mask.ndim != 3:
         raise CoordinateError("TOPO.nc", "Terrain mask must be 3D with a vertical dimension")
     return mask

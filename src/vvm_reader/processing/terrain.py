@@ -21,16 +21,22 @@ def apply_terrain_mask(
 ) -> xr.Dataset:
     """
     Apply terrain masking to 3D variables.
-    
+
+    Performance note: This function converts the mask to bool only for the
+    sliced region, which is much faster than converting the entire mask.
+
     Args:
         dataset: Input dataset
-        terrain_mask: 3D terrain mask array
-    
+        terrain_mask: 3D terrain mask array (may be lazy, not yet converted to bool)
+
     Returns:
         xr.Dataset: Masked dataset
     """
     try:
         z_dim, y_dim, x_dim = terrain_mask.sizes
+
+        # Convert to bool here, after spatial/vertical slicing
+        # This only loads and converts the small sliced region, not the full mask
         mask_bool = terrain_mask.astype(bool)
 
         masked_vars = {}
@@ -61,10 +67,13 @@ def mask_staggered_variables_for_centering(
     """
     Mask staggered variables inside terrain before centering operations.
 
+    Performance note: This function converts the mask to bool only for the
+    sliced region, which is much faster than converting the entire mask.
+
     Args:
         dataset: Input dataset
         variables: List of variable names to mask
-        terrain_mask: 3D terrain mask array
+        terrain_mask: 3D terrain mask array (may be lazy, not yet converted to bool)
         mask_value: Value to use for masking (0.0 for winds, np.nan for vorticity)
 
     Returns:
@@ -72,6 +81,9 @@ def mask_staggered_variables_for_centering(
     """
     try:
         z_dim, y_dim, x_dim = terrain_mask.sizes
+
+        # Convert to bool here, after spatial/vertical slicing
+        # This only loads and converts the small sliced region, not the full mask
         mask_bool = terrain_mask.astype(bool)
 
         updates = {}

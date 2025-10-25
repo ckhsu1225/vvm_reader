@@ -87,7 +87,7 @@ class VVMDatasetLoader:
             raise NoDataError("No valid groups found to load")
         
         # Step 2: Setup coordinate system
-        coord_info, sfc_level, terrain_mask = self._setup_coordinates(params.processing_options.engine)
+        coord_info, terrain_mask = self._setup_coordinates(params.processing_options.engine)
         slice_info = compute_regional_slices(coord_info, params.region)
         
         # Step 3: Resolve vertical selection
@@ -126,7 +126,7 @@ class VVMDatasetLoader:
         
         # Step 8: Post-processing pipeline
         dataset = self._post_process_dataset(
-            dataset, params, coord_info, slice_info, sfc_level,
+            dataset, params, coord_info, slice_info,
             crop_offsets, vertical_crop_offset, vertical_target_length,
             needs_centering, read_slice_info, terrain_mask,
             vertical_slice, vertical_read_slice
@@ -135,13 +135,16 @@ class VVMDatasetLoader:
         return dataset
     
     def _setup_coordinates(self, engine):
-        """Setup coordinate system from TOPO.nc."""
+        """Setup coordinate system from TOPO.nc.
+
+        Performance optimization: Defers surface level computation until after
+        spatial slicing to avoid loading the full TOPO mask.
+        """
         topo_ds = load_topo_dataset(self.sim_dir, engine)
         coord_info = extract_coordinates_from_topo(topo_ds)
         terrain_mask = extract_terrain_mask(topo_ds)
-        sfc_level = compute_surface_topo_levels(terrain_mask)
         self.topo_ds = topo_ds
-        return coord_info, sfc_level, terrain_mask
+        return coord_info, terrain_mask
     
     def _check_centering_needed(self, variables, center_staggered):
         """Check which staggered variables need centering (winds and vorticities)."""
@@ -277,7 +280,7 @@ class VVMDatasetLoader:
             return None
     
     def _post_process_dataset(
-        self, dataset, params, coord_info, slice_info, sfc_level,
+        self, dataset, params, coord_info, slice_info,
         crop_offsets, vertical_crop_offset, vertical_target_length,
         needs_centering, read_slice_info, terrain_mask,
         vertical_slice, vertical_read_slice
@@ -326,9 +329,12 @@ class VVMDatasetLoader:
 
         # Step 5: Extract surface values if requested
         if params.vertical_selection.surface_nearest:
-            sfc_level = apply_spatial_selection(sfc_level, coord_info, slice_info)
+            # Compute surface level from sliced terrain mask (performance optimization)
+            # This only computes on the small sliced region, not the full domain
+            sfc_level_sliced = compute_surface_topo_levels(terrain_mask_final)
+
             dataset = extract_surface_nearest_values(
-                dataset, sfc_level, params.vertical_selection
+                dataset, sfc_level_sliced, params.vertical_selection
             )
 
         # Step 6: Filter to requested variables only
@@ -338,7 +344,12 @@ class VVMDatasetLoader:
             for var in created_center_vars:
                 if var not in requested_vars:
                     requested_vars.append(var)
-            
+
+            # Always keep surface_level_index for diagnostic computation
+            if 'surface_level_index' in dataset.data_vars:
+                if 'surface_level_index' not in requested_vars:
+                    requested_vars.append('surface_level_index')
+
             # Keep only variables that exist in the dataset
             keep_vars = [v for v in requested_vars if v in dataset.data_vars]
             if keep_vars:

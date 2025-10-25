@@ -69,23 +69,56 @@ def compute_diagnostics(
             profiles = xr.Dataset()
 
     # Align profiles with dataset vertical dimension if needed
-    if isinstance(profiles, xr.Dataset) and 'lev' in ds.dims and 'lev' in profiles.dims:
-        try:
-            # Use nearest neighbor matching with tolerance to handle floating point errors
-            profiles_aligned = profiles.sel(lev=ds['lev'], method='nearest', tolerance=1.0)
+    if isinstance(profiles, xr.Dataset) and 'lev' in profiles.dims:
+        if 'lev' in ds.dims:
+            # Case 1: Dataset has vertical dimension - align profiles to it
+            try:
+                # Use nearest neighbor matching with tolerance to handle floating point errors
+                profiles_aligned = profiles.sel(lev=ds['lev'], method='nearest', tolerance=1.0)
 
-            # Replace the lev coordinate with dataset's lev to ensure exact match
-            # This prevents NaN values due to floating point differences
-            profiles_aligned = profiles_aligned.assign_coords({'lev': ds['lev']})
+                # Replace the lev coordinate with dataset's lev to ensure exact match
+                # This prevents NaN values due to floating point differences
+                profiles_aligned = profiles_aligned.assign_coords({'lev': ds['lev']})
 
-            logger.debug(
-                f"Aligned profiles to dataset lev dimension: "
-                f"{len(ds['lev'])} levels from {ds['lev'].values[0]:.1f}m to {ds['lev'].values[-1]:.1f}m"
-            )
-            profiles = profiles_aligned
-        except Exception as e:
-            logger.warning(f"Could not align profiles with dataset levels: {e}")
-            # Continue with full profiles - xarray will handle alignment during operations
+                logger.debug(
+                    f"Aligned profiles to dataset lev dimension: "
+                    f"{len(ds['lev'])} levels from {ds['lev'].values[0]:.1f}m to {ds['lev'].values[-1]:.1f}m"
+                )
+                profiles = profiles_aligned
+            except Exception as e:
+                logger.warning(f"Could not align profiles with dataset levels: {e}")
+                # Continue with full profiles - xarray will handle alignment during operations
+
+        elif 'surface_level_index' in ds.data_vars:
+            # Case 2: Surface-only dataset with surface_level_index
+            # Select profile values at the surface level for each grid point
+            try:
+                sfc_indices = ds['surface_level_index'].astype(int)
+
+                # Extract profile values at surface indices for each profile variable
+                profiles_surface = xr.Dataset()
+                for var_name in profiles.data_vars:
+                    profile_var = profiles[var_name]
+                    # Select values at surface indices (varying by horizontal position)
+                    surface_values = profile_var.isel(lev=sfc_indices)
+                    profiles_surface[var_name] = surface_values
+
+                logger.debug(
+                    f"Selected surface profile values using surface_level_index "
+                    f"(k range: {int(sfc_indices.min())}-{int(sfc_indices.max())})"
+                )
+                profiles = profiles_surface
+
+            except Exception as e:
+                logger.warning(f"Could not select surface profiles: {e}")
+                # Fall back to using the lowest level (k=0) for all grid points
+                try:
+                    profiles_surface = profiles.isel(lev=0)
+                    logger.debug("Using lowest level (k=0) profile values for all grid points")
+                    profiles = profiles_surface
+                except Exception as e2:
+                    logger.warning(f"Could not select k=0 profiles: {e2}")
+                    # Continue with full profiles
 
     # Resolve computation order
     try:
