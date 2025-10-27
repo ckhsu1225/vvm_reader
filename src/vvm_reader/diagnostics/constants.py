@@ -9,8 +9,6 @@ References:
     - Wallace & Hobbs (2006) Atmospheric Science: An Introductory Survey
 """
 
-import numpy as np
-
 # ============================================================================
 # Fundamental Physical Constants
 # ============================================================================

@@ -14,28 +14,28 @@ Usage:
     # Automatic diagnostic calculation
     ds = vvm.open_vvm_dataset(
         "/path/to/sim",
-        variables=["u", "v", "T", "RH", "MSE"]  # T, RH, MSE computed automatically
+        variables=["u", "v", "t", "rh", "hms"]  # t, rh, hms computed automatically
     )
 
 Available Diagnostic Variables:
     Thermodynamics:
-        - T: Temperature
-        - T_v: Virtual temperature
-        - theta_v: Virtual potential temperature
-        - theta_e: Equivalent potential temperature
-        - theta_es: Saturation equivalent potential temperature
+        - t: Temperature
+        - tv: Virtual temperature
+        - thv: Virtual potential temperature
+        - the: Equivalent potential temperature
+        - thes: Saturation equivalent potential temperature
 
     Moisture:
-        - RH: Relative humidity
+        - rh: Relative humidity
         - qvs: Saturation mixing ratio
-        - CWV: Column water vapor
-        - LWP: Liquid water path
-        - IWP: Ice water path
+        - cwv: Column water vapor
+        - lwp: Liquid water path
+        - iwp: Ice water path
 
     Energy:
-        - DSE: Dry static energy
-        - MSE: Moist static energy
-        - MSE_s: Saturation moist static energy
+        - sd: Dry static energy
+        - hm: Moist static energy
+        - hms: Saturation moist static energy
 
 Notes:
     - All calculations use PIBAR as background Exner function
@@ -96,9 +96,9 @@ Available Diagnostic Variables ({len(all_vars)}):
 
     # Group by category
     categories = {
-        'Thermodynamics': ['T', 'T_v', 'theta_v', 'theta_e', 'theta_es'],
-        'Moisture': ['RH', 'qvs', 'CWV', 'LWP', 'IWP'],
-        'Energy': ['DSE', 'MSE', 'MSE_s'],
+        'Thermodynamics': ['t', 'tv', 'thv', 'the', 'thes'],
+        'Moisture': ['rh', 'qvs', 'cwv', 'lwp', 'iwp'],
+        'Energy': ['sd', 'hm', 'hms'],
     }
 
     for category, var_list in categories.items():
@@ -113,5 +113,5 @@ Available Diagnostic Variables ({len(all_vars)}):
     print("\nFor more information, see documentation or use:")
     print("  >>> from vvm_reader.diagnostics import get_registry")
     print("  >>> registry = get_registry()")
-    print("  >>> metadata = registry.get_metadata('T')")
+    print("  >>> metadata = registry.get_metadata('t')")
     print()

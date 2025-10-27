@@ -17,33 +17,33 @@ from ...core.core_types import CoordinateInfo, SliceInfo
 # ============================================================================
 
 def apply_spatial_selection(
-    dataset: xr.Dataset,
+    data: xr.Dataset | xr.DataArray,
     coord_info: CoordinateInfo,
     slice_info: SliceInfo
-) -> xr.Dataset:
+) -> xr.Dataset | xr.DataArray:
     """
-    Apply spatial selection to a dataset.
+    Apply spatial selection to a dataset or data array.
 
     Args:
-        dataset: Input dataset
+        data: Input dataset or data array (e.g., 2D topo)
         coord_info: Coordinate information
         slice_info: Slice information
 
     Returns:
-        xr.Dataset: Spatially selected dataset
+        xr.Dataset | xr.DataArray: Spatially selected data
     """
     indexers = {}
 
-    if coord_info.x_dim in dataset.sizes:
+    if coord_info.x_dim in data.sizes:
         indexers[coord_info.x_dim] = slice_info.x_slice
 
-    if coord_info.y_dim in dataset.sizes:
+    if coord_info.y_dim in data.sizes:
         indexers[coord_info.y_dim] = slice_info.y_slice
 
     if indexers:
-        dataset = dataset.isel(indexers)
+        data = data.isel(indexers)
 
-    return dataset
+    return data
 
 
 def crop_dataset_after_centering(

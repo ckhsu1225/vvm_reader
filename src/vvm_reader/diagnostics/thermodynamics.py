@@ -2,11 +2,11 @@
 Thermodynamic Diagnostic Variables
 
 This module implements thermodynamic diagnostic variables including:
-- Temperature (T)
-- Virtual temperature (T_v)
-- Virtual potential temperature (theta_v)
-- Equivalent potential temperature (theta_e)
-- Saturation equivalent potential temperature (theta_es)
+- Temperature (t)
+- Virtual temperature (tv)
+- Virtual potential temperature (thv)
+- Equivalent potential temperature (the)
+- Saturation equivalent potential temperature (thes)
 
 All calculations use PIBAR as the background Exner function, which is
 appropriate for most applications with errors <2%.
@@ -153,7 +153,7 @@ def saturation_mixing_ratio(T: xr.DataArray, P: xr.DataArray, over_ice: bool = N
 # ============================================================================
 
 @register_diagnostic(
-    name='T',
+    name='t',
     file_dependencies=['th'],
     profile_dependencies=['PIBAR'],
     long_name='Temperature',
@@ -200,10 +200,10 @@ def compute_temperature(ds: xr.Dataset, profiles: xr.Dataset,
 
 
 @register_diagnostic(
-    name='T_v',
+    name='tv',
     file_dependencies=['th', 'qv'],
     profile_dependencies=['PIBAR'],
-    diagnostic_dependencies=['T'],
+    diagnostic_dependencies=['t'],
     long_name='Virtual temperature',
     units='K',
     description='Virtual temperature accounting for moisture and hydrometeor effects on air density',
@@ -232,7 +232,7 @@ def compute_virtual_temperature(ds: xr.Dataset, profiles: xr.Dataset,
     Returns:
         Virtual temperature [K]
     """
-    T = diagnostics['T']
+    T = diagnostics['t']
     qv = ds['qv']
 
     # Total condensate (all hydrometeors except vapor)
@@ -250,7 +250,7 @@ def compute_virtual_temperature(ds: xr.Dataset, profiles: xr.Dataset,
     # Document what was included
     if condensate_components:
         hydrometeor_status = f"included ({', '.join(condensate_components)})"
-        logger.debug(f"T_v: Including hydrometeors: {condensate_components}")
+        logger.debug(f"Tv: Including hydrometeors: {condensate_components}")
     else:
         hydrometeor_status = "not available (vapor only)"
 
@@ -265,7 +265,7 @@ def compute_virtual_temperature(ds: xr.Dataset, profiles: xr.Dataset,
 
 
 @register_diagnostic(
-    name='theta_v',
+    name='thv',
     file_dependencies=['th', 'qv'],
     long_name='Virtual potential temperature',
     units='K',
@@ -327,10 +327,10 @@ def compute_virtual_potential_temperature(ds: xr.Dataset, profiles: xr.Dataset,
 # ============================================================================
 
 @register_diagnostic(
-    name='theta_e',
+    name='the',
     file_dependencies=['th', 'qv'],
     profile_dependencies=['PIBAR', 'PBAR'],
-    diagnostic_dependencies=['T'],
+    diagnostic_dependencies=['t'],
     long_name='Equivalent potential temperature',
     units='K',
     description='Potential temperature that air would have if all moisture condensed',
@@ -365,7 +365,7 @@ def compute_equivalent_potential_temperature(ds: xr.Dataset, profiles: xr.Datase
     """
     th = ds['th']
     qv = ds['qv']
-    T = diagnostics['T']
+    T = diagnostics['t']
 
     # Vapor latent heat (always included)
     latent_term = Lv * qv / (Cp_d * T)
@@ -401,10 +401,10 @@ def compute_equivalent_potential_temperature(ds: xr.Dataset, profiles: xr.Datase
 
 
 @register_diagnostic(
-    name='theta_es',
+    name='thes',
     file_dependencies=['th'],
     profile_dependencies=['PIBAR', 'PBAR'],
-    diagnostic_dependencies=['T'],
+    diagnostic_dependencies=['t'],
     long_name='Saturation equivalent potential temperature',
     units='K',
     description='Equivalent potential temperature at saturation',
@@ -446,7 +446,7 @@ def compute_saturation_equivalent_potential_temperature(
         Mon. Wea. Rev., 108, 1046-1053.
     """
     th = ds['th']
-    T = diagnostics['T']
+    T = diagnostics['t']
 
     # profiles['PBAR'] is xr.DataArray with lev coordinate
     # xarray will automatically align coordinates

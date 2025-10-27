@@ -2,11 +2,11 @@
 Moisture Diagnostic Variables
 
 This module implements moisture-related diagnostic variables including:
-- Relative humidity (RH)
+- Relative humidity (rh)
 - Saturation mixing ratio (qvs)
-- Column water vapor (CWV)
-- Liquid water path (LWP)
-- Ice water path (IWP)
+- Column water vapor (cwv)
+- Liquid water path (lwp)
+- Ice water path (iwp)
 """
 
 import xarray as xr
@@ -23,10 +23,10 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 @register_diagnostic(
-    name='RH',
+    name='rh',
     file_dependencies=['qv'],
     profile_dependencies=['PIBAR', 'PBAR'],
-    diagnostic_dependencies=['T'],
+    diagnostic_dependencies=['t'],
     long_name='Relative humidity',
     units='%',
     description='Relative humidity with respect to liquid water',
@@ -51,7 +51,7 @@ def compute_relative_humidity(ds: xr.Dataset, profiles: xr.Dataset,
         Relative humidity [%]
     """
     qv = ds['qv']
-    T = diagnostics['T']
+    T = diagnostics['t']
 
     # profiles['PBAR'] is xr.DataArray with lev coordinate
     # xarray will automatically align coordinates
@@ -77,7 +77,7 @@ def compute_relative_humidity(ds: xr.Dataset, profiles: xr.Dataset,
 @register_diagnostic(
     name='qvs',
     profile_dependencies=['PIBAR', 'PBAR'],
-    diagnostic_dependencies=['T'],
+    diagnostic_dependencies=['t'],
     long_name='Saturation mixing ratio',
     units='kg kg-1',
     description='Saturation water vapor mixing ratio',
@@ -95,7 +95,7 @@ def compute_saturation_mixing_ratio(ds: xr.Dataset, profiles: xr.Dataset,
     Returns:
         Saturation mixing ratio [kg/kg]
     """
-    T = diagnostics['T']
+    T = diagnostics['t']
 
     # profiles['PBAR'] is xr.DataArray with lev coordinate
     P = profiles['PBAR']
@@ -117,7 +117,7 @@ def compute_saturation_mixing_ratio(ds: xr.Dataset, profiles: xr.Dataset,
 # ============================================================================
 
 @register_diagnostic(
-    name='CWV',
+    name='cwv',
     file_dependencies=['qv'],
     profile_dependencies=['RHO'],
     long_name='Column water vapor',
@@ -185,7 +185,7 @@ def compute_column_water_vapor(ds: xr.Dataset, profiles: xr.Dataset,
 
 
 @register_diagnostic(
-    name='LWP',
+    name='lwp',
     file_dependencies=['qc', 'qr'],
     profile_dependencies=['RHO'],
     long_name='Liquid water path',
@@ -266,7 +266,7 @@ def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
 
 
 @register_diagnostic(
-    name='IWP',
+    name='iwp',
     file_dependencies=['qi', 'qrim'],
     profile_dependencies=['RHO'],
     long_name='Ice water path',

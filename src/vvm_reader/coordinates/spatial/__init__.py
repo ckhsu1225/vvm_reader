@@ -9,8 +9,7 @@ TOPO.nc loading, coordinate conversion, slice computation, and dataset operation
 from .loader import (
     load_topo_dataset,
     extract_coordinates_from_topo,
-    compute_surface_topo_levels,
-    extract_terrain_mask,
+    prepare_topo_data,
     extract_terrain_height,
 )
 
@@ -38,8 +37,7 @@ __all__ = [
     # Loader functions
     "load_topo_dataset",
     "extract_coordinates_from_topo",
-    "compute_surface_topo_levels",
-    "extract_terrain_mask",
+    "prepare_topo_data",
     "extract_terrain_height",
     # Conversion functions
     "convert_coordinates_to_indices",

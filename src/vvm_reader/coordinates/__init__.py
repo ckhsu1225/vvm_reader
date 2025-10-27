@@ -10,8 +10,8 @@ from .spatial import (
     # TOPO loading and extraction
     load_topo_dataset,
     extract_coordinates_from_topo,
-    compute_surface_topo_levels,
-    extract_terrain_mask,
+    prepare_topo_data,
+    extract_terrain_height,
     # Coordinate conversion
     convert_coordinates_to_indices,
     convert_indices_to_coordinates,
@@ -37,8 +37,8 @@ __all__ = [
     # Spatial - TOPO loading and extraction
     "load_topo_dataset",
     "extract_coordinates_from_topo",
-    "compute_surface_topo_levels",
-    "extract_terrain_mask",
+    "prepare_topo_data",
+    "extract_terrain_height",
     # Spatial - Coordinate conversion
     "convert_coordinates_to_indices",
     "convert_indices_to_coordinates",

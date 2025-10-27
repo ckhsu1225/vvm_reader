@@ -2,12 +2,11 @@
 Energy Diagnostic Variables
 
 This module implements energy-related diagnostic variables including:
-- Dry static energy (DSE)
-- Moist static energy (MSE)
-- Saturation moist static energy (MSE_s)
+- Dry static energy (sd)
+- Moist static energy (hm)
+- Saturation moist static energy (hms)
 """
 
-import numpy as np
 import xarray as xr
 from typing import Dict
 
@@ -23,9 +22,9 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 @register_diagnostic(
-    name='DSE',
+    name='sd',
     profile_dependencies=['PIBAR'],
-    diagnostic_dependencies=['T'],
+    diagnostic_dependencies=['t'],
     long_name='Dry static energy',
     units='J kg-1',
     description='Dry static energy (Cp*T + g*z)',
@@ -46,7 +45,7 @@ def compute_dry_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
     Returns:
         Dry static energy [J/kg]
     """
-    T = diagnostics['T']
+    T = diagnostics['t']
 
     # Get height coordinate
     if 'lev' in ds.coords:
@@ -70,10 +69,10 @@ def compute_dry_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
 
 
 @register_diagnostic(
-    name='MSE',
+    name='hm',
     file_dependencies=['qv'],
     profile_dependencies=['PIBAR'],
-    diagnostic_dependencies=['T'],
+    diagnostic_dependencies=['t'],
     long_name='Moist static energy',
     units='J kg-1',
     description='Moist static energy including latent heat from vapor and ice',
@@ -102,7 +101,7 @@ def compute_moist_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
     Returns:
         Moist static energy [J/kg]
     """
-    T = diagnostics['T']
+    T = diagnostics['t']
     qv = ds['qv']
 
     # Get height coordinate
@@ -150,9 +149,9 @@ def compute_moist_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
 
 
 @register_diagnostic(
-    name='MSE_s',
+    name='hms',
     profile_dependencies=['PIBAR', 'PBAR'],
-    diagnostic_dependencies=['T'],
+    diagnostic_dependencies=['t'],
     long_name='Saturation moist static energy',
     units='J kg-1',
     description='Moist static energy at saturation with temperature-dependent latent heat',
@@ -186,7 +185,7 @@ def compute_saturation_moist_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
     Returns:
         Saturation moist static energy [J/kg]
     """
-    T = diagnostics['T']
+    T = diagnostics['t']
 
     # Get height coordinate
     if 'lev' in ds.coords:

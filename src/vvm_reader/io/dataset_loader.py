@@ -27,8 +27,8 @@ from ..io.manifest import load_or_create_manifest
 from ..coordinates.time_handler import filter_files_by_time
 
 from ..coordinates.spatial import (
-    load_topo_dataset, extract_coordinates_from_topo, compute_surface_topo_levels,
-    extract_terrain_mask, extract_terrain_height, compute_regional_slices, compute_centering_slices, apply_spatial_selection,
+    load_topo_dataset, extract_coordinates_from_topo, prepare_topo_data, extract_terrain_height,
+    compute_regional_slices, compute_centering_slices, apply_spatial_selection,
     crop_dataset_after_centering, assign_spatial_coordinates
 )
 
@@ -87,7 +87,7 @@ class VVMDatasetLoader:
             raise NoDataError("No valid groups found to load")
         
         # Step 2: Setup coordinate system
-        coord_info, terrain_mask = self._setup_coordinates(params.processing_options.engine)
+        coord_info, topo = self._setup_coordinates(params.processing_options.engine)
         slice_info = compute_regional_slices(coord_info, params.region)
         
         # Step 3: Resolve vertical selection
@@ -128,8 +128,7 @@ class VVMDatasetLoader:
         dataset = self._post_process_dataset(
             dataset, params, coord_info, slice_info,
             crop_offsets, vertical_crop_offset, vertical_target_length,
-            needs_centering, read_slice_info, terrain_mask,
-            vertical_slice, vertical_read_slice
+            needs_centering, read_slice_info, topo
         )
         
         return dataset
@@ -137,14 +136,14 @@ class VVMDatasetLoader:
     def _setup_coordinates(self, engine):
         """Setup coordinate system from TOPO.nc.
 
-        Performance optimization: Defers surface level computation until after
-        spatial slicing to avoid loading the full TOPO mask.
+        Performance optimization: Returns 2D topo instead of 3D mask for
+        dynamic mask generation, significantly reducing I/O and memory usage.
         """
         topo_ds = load_topo_dataset(self.sim_dir, engine)
         coord_info = extract_coordinates_from_topo(topo_ds)
-        terrain_mask = extract_terrain_mask(topo_ds)
+        topo = prepare_topo_data(topo_ds)
         self.topo_ds = topo_ds
-        return coord_info, terrain_mask
+        return coord_info, topo
     
     def _check_centering_needed(self, variables, center_staggered):
         """Check which staggered variables need centering (winds and vorticities)."""
@@ -292,25 +291,22 @@ class VVMDatasetLoader:
     def _post_process_dataset(
         self, dataset, params, coord_info, slice_info,
         crop_offsets, vertical_crop_offset, vertical_target_length,
-        needs_centering, read_slice_info, terrain_mask,
-        vertical_slice, vertical_read_slice
+        needs_centering, read_slice_info, topo
     ):
         """Apply all post-processing operations."""
-        
+
         mask_slice = read_slice_info if read_slice_info is not None else slice_info
 
-        terrain_mask_center = apply_spatial_selection(terrain_mask, coord_info, mask_slice)
-        terrain_mask_center = apply_vertical_selection(terrain_mask_center, vertical_read_slice)
-
-        terrain_mask_final = apply_spatial_selection(terrain_mask, coord_info, slice_info)
-        terrain_mask_final = apply_vertical_selection(terrain_mask_final, vertical_slice)
+        # Slice 2D topo for centering and final masking
+        topo_center = apply_spatial_selection(topo, coord_info, mask_slice)
+        topo_final = apply_spatial_selection(topo, coord_info, slice_info)
 
         # Step 1: Center staggered variables (winds and vorticities) if requested
         created_center_vars = []
         if params.processing_options.center_staggered and any(needs_centering.values()):
             dataset, created_center_vars = center_staggered_variables(
                 dataset, coord_info, mask_slice,
-                terrain_mask_center,
+                topo_center,
                 params.processing_options.center_suffix,
             )
 
@@ -331,7 +327,7 @@ class VVMDatasetLoader:
 
         # Step 3: Apply terrain masking
         if params.processing_options.mask_terrain:
-            dataset = apply_terrain_mask(dataset, terrain_mask_final)
+            dataset = apply_terrain_mask(dataset, topo_final)
 
         # Step 4: Assign spatial coordinates
         dataset = assign_spatial_coordinates(dataset, coord_info, slice_info)
@@ -339,12 +335,10 @@ class VVMDatasetLoader:
 
         # Step 5: Extract surface values if requested
         if params.vertical_selection.surface_nearest:
-            # Compute surface level from sliced terrain mask (performance optimization)
-            # This only computes on the small sliced region, not the full domain
-            sfc_level_sliced = compute_surface_topo_levels(terrain_mask_final)
-
+            # Use topo_final directly as surface level (2D array with k indices)
+            # This is much faster than computing from 3D mask
             dataset = extract_surface_nearest_values(
-                dataset, sfc_level_sliced, params.vertical_selection
+                dataset, topo_final, params.vertical_selection
             )
 
         # Step 6: Filter to requested variables only

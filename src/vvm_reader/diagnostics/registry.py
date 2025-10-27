@@ -26,7 +26,7 @@ class DiagnosticVariable:
     Metadata and computation information for a diagnostic variable.
 
     Attributes:
-        name: Variable name (e.g., 'T', 'RH', 'MSE')
+        name: Variable name (e.g., 't', 'rh', 'hm')
         compute_func: Function to compute this variable
         file_dependencies: Model output variables needed from NetCDF files
         profile_dependencies: Reference profiles needed from fort.98
@@ -320,7 +320,7 @@ def register_diagnostic(
 
     Example:
         @register_diagnostic(
-            name='T',
+            name='t',
             file_dependencies=['th'],
             profile_dependencies=['PIBAR'],
             long_name='Temperature',

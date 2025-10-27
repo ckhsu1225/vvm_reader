@@ -4,12 +4,11 @@ VVM Reader Spatial Coordinate Loader
 This module handles loading and extracting coordinate information from TOPO.nc.
 """
 
-from functools import lru_cache
 from typing import Optional
 from pathlib import Path
 import xarray as xr
 
-from ...core.config import LON_DIM, LAT_DIM, TOPO_VAR, VERTICAL_DIM, get_simulation_paths
+from ...core.config import LON_DIM, LAT_DIM, TOPO_VAR, get_simulation_paths
 from ...core.core_types import CoordinateInfo
 from ...core.exceptions import CoordinateError, validate_required_file
 
@@ -18,7 +17,6 @@ from ...core.exceptions import CoordinateError, validate_required_file
 # TOPO.nc Loading and Validation
 # ============================================================================
 
-@lru_cache(maxsize=32)
 def load_topo_dataset(sim_dir: Path, engine: Optional[str] = None) -> xr.Dataset:
     """
     Load and validate TOPO.nc dataset with caching.
@@ -50,7 +48,7 @@ def load_topo_dataset(sim_dir: Path, engine: Optional[str] = None) -> xr.Dataset
         raise CoordinateError("TOPO.nc", f"Failed to open file: {e}")
 
     # Validate required variables
-    required_vars = [LON_DIM, LAT_DIM, TOPO_VAR, "mask"]
+    required_vars = [LON_DIM, LAT_DIM, TOPO_VAR]
     missing_vars = [var for var in required_vars if var not in topo_ds]
     if missing_vars:
         raise CoordinateError("TOPO.nc", f"Missing required variables: {missing_vars}")
@@ -94,58 +92,51 @@ def extract_coordinates_from_topo(topo_ds: xr.Dataset) -> CoordinateInfo:
     )
 
 
-def compute_surface_topo_levels(terrain_mask: xr.DataArray) -> xr.DataArray:
+def prepare_topo_data(topo_ds: xr.Dataset) -> xr.DataArray:
     """
-    Compute the surface topography levels from the terrain mask.
+    Prepare topography data from TOPO dataset.
 
-    Performance note: This function keeps the computation lazy. The actual
-    data loading and computation will be deferred until the surface_level
-    is accessed, and only after spatial slicing has been applied.
+    This function extracts the 2D topo array and applies the ocean->land masking rule.
+    The topo array contains the vertical index (k) of the terrain top at each (x,y) point.
 
-    Args:
-        terrain_mask: 3D terrain mask array from TOPO.nc (may be lazy)
-
-    Returns:
-        xr.DataArray: Surface topography levels (lazy computation)
-    """
-    if terrain_mask is None:
-        raise CoordinateError("TOPO.nc", "Terrain mask variable 'mask' is required")
-
-    if VERTICAL_DIM not in terrain_mask.dims or terrain_mask.ndim != 3:
-        raise CoordinateError("TOPO.nc", "Terrain mask must be 3D with a vertical dimension")
-
-    # Keep computation lazy - astype(bool) and sum() will be deferred
-    # This allows xarray to optimize the computation after spatial slicing
-    mask_bool = terrain_mask.astype(bool)
-    surface_level = (~mask_bool).sum(dim=VERTICAL_DIM)
-    surface_level.name = "surface_level"
-    return surface_level
-
-
-def extract_terrain_mask(topo_ds: xr.Dataset) -> xr.DataArray:
-    """
-    Extract the 3D terrain mask from TOPO.nc.
-
-    Performance note: Returns the mask without type conversion to keep it lazy.
-    The astype(bool) conversion will be deferred until after spatial slicing,
-    which significantly reduces memory and loading time.
+    Performance note: Returns a 2D array instead of a 3D mask, which is much more
+    efficient for memory usage and I/O. The 3D mask is dynamically generated when
+    needed via broadcasting in apply_terrain_mask().
 
     Args:
         topo_ds: TOPO dataset
 
     Returns:
-        xr.DataArray: 3D terrain mask (lazy, not yet converted to bool)
+        xr.DataArray: 2D topography data with terrain top indices
     """
-    if "mask" not in topo_ds:
-        raise CoordinateError("TOPO.nc", "Terrain mask variable 'mask' is required")
+    if TOPO_VAR not in topo_ds:
+        raise CoordinateError("TOPO.nc", f"Topography variable '{TOPO_VAR}' is required")
 
-    # Keep mask lazy - don't convert to bool yet
-    # This allows xarray to defer loading until after spatial/vertical slicing
-    mask = topo_ds["mask"]
+    topo = topo_ds[TOPO_VAR]
 
-    if VERTICAL_DIM not in mask.dims or mask.ndim != 3:
-        raise CoordinateError("TOPO.nc", "Terrain mask must be 3D with a vertical dimension")
-    return mask
+    # Validate dimensions
+    if topo.ndim != 2:
+        raise CoordinateError("topo", f"Expected 2D, got {topo.ndim}D")
+
+    # Apply the standard masking rule: convert ocean (0) -> land (1)
+    # This ensures k <= topo masking works correctly
+    return _apply_topo_masking_rule(topo)
+
+
+def _apply_topo_masking_rule(topo: xr.DataArray) -> xr.DataArray:
+    """
+    Apply the standard topography masking rule.
+
+    Converts ocean (0) -> land (1) to match the terrain masking rule k <= topo.
+
+    Args:
+        topo: Raw topography data
+
+    Returns:
+        xr.DataArray: Processed topography data
+    """
+    from ...core.config import MIN_LAND_TOPO_VALUE
+    return topo.where(topo >= MIN_LAND_TOPO_VALUE, MIN_LAND_TOPO_VALUE)
 
 
 def extract_terrain_height(topo_ds: xr.Dataset) -> xr.DataArray:

@@ -4,7 +4,6 @@ VVM Reader Vertical Level Processing
 This module handles vertical coordinate processing including level selection and fort.98 reading.
 """
 
-from functools import lru_cache
 from typing import Optional, Tuple
 from pathlib import Path
 import numpy as np
@@ -18,7 +17,6 @@ from ..core.exceptions import RequiredFileNotFoundError, ParameterError, DataPro
 # fort.98 Processing
 # ============================================================================
 
-@lru_cache(maxsize=16)
 def read_reference_profiles_from_fort98(sim_dir: Path) -> dict:
     """
     Read reference state profiles (RHO, THBAR, PBAR, PIBAR, QVBAR) from fort.98.
@@ -127,7 +125,6 @@ def read_reference_profiles_from_fort98(sim_dir: Path) -> dict:
     }
 
 
-@lru_cache(maxsize=16)
 def read_vertical_levels_from_fort98(sim_dir: Path) -> np.ndarray:
     """
     Read ZT(K) vertical levels from fort.98 file with caching.

@@ -17,36 +17,71 @@ from ..core.core_types import CoordinateInfo, SliceInfo
 
 def apply_terrain_mask(
     dataset: xr.Dataset,
-    terrain_mask: xr.DataArray
+    topo: xr.DataArray,
+    variables: list = None,
+    mask_value: float = np.nan,
+    vertical_dim: str = VERTICAL_DIM
 ) -> xr.Dataset:
     """
     Apply terrain masking to 3D variables.
 
-    Performance note: This function converts the mask to bool only for the
-    sliced region, which is much faster than converting the entire mask.
+    Sets values to specified mask_value for grid points inside or at the terrain surface.
+    Masking rule: k <= topo (where k is 1-based vertical index).
+
+    Performance note: This function uses dynamic broadcasting to create the mask
+    only when needed, which is much faster and uses less memory than loading a
+    pre-computed 3D mask.
 
     Args:
         dataset: Input dataset
-        terrain_mask: 3D terrain mask array (may be lazy, not yet converted to bool)
+        topo: 2D topography data (y, x) with terrain top indices
+        variables: List of variable names to mask. If None, mask all 3D variables.
+        mask_value: Value to use for masking (default: np.nan, use 0.0 for winds before centering)
+        vertical_dim: Name of vertical dimension
 
     Returns:
-        xr.Dataset: Masked dataset
+        xr.Dataset: Dataset with terrain-masked variables
+
+    Raises:
+        DataProcessingError: If masking operation fails
     """
+    if vertical_dim not in dataset.sizes:
+        return dataset
+
     try:
-        z_dim, y_dim, x_dim = terrain_mask.sizes
+        # Get vertical dimension info
+        nz = dataset.sizes[vertical_dim]
+        y_dim, x_dim = topo.dims
 
-        # Convert to bool here, after spatial/vertical slicing
-        # This only loads and converts the small sliced region, not the full mask
-        mask_bool = terrain_mask.astype(bool)
+        # Create 1-based vertical index array
+        k_indices = xr.DataArray(
+            np.arange(1, nz + 1, dtype=np.int32),
+            dims=[vertical_dim]
+        )
 
+        # Convert topo to integer for comparison
+        topo_int = topo.astype(np.int32)
+
+        # Create mask: True where k <= topo (inside terrain)
+        # Broadcasting creates mask over (vertical_dim, y_dim, x_dim)
+        terrain_mask = k_indices <= topo_int
+
+        # Apply mask to specified or all 3D variables
         masked_vars = {}
         for name, var in dataset.data_vars.items():
-            if (z_dim in var.sizes and
+            if (vertical_dim in var.sizes and
                 y_dim in var.sizes and
                 x_dim in var.sizes):
-                masked_var = var.where(mask_bool.values)
-                masked_vars[name] = masked_var
+                # Only mask if variable is in the list (or list is None)
+                if variables is None or name in variables:
+                    # Mask terrain points to specified value
+                    # Use .data to avoid xarray overhead
+                    masked_var = var.where(~terrain_mask.data, mask_value)
+                    masked_vars[name] = masked_var
+                else:
+                    masked_vars[name] = var
             else:
+                # Keep 2D and other variables unchanged
                 masked_vars[name] = var
 
         return xr.Dataset(
@@ -58,55 +93,12 @@ def apply_terrain_mask(
     except Exception as e:
         raise DataProcessingError("terrain masking", str(e))
 
-def mask_staggered_variables_for_centering(
-    dataset: xr.Dataset,
-    variables: list,
-    terrain_mask: xr.DataArray,
-    mask_value: float = np.nan
-) -> xr.Dataset:
-    """
-    Mask staggered variables inside terrain before centering operations.
-
-    Performance note: This function converts the mask to bool only for the
-    sliced region, which is much faster than converting the entire mask.
-
-    Args:
-        dataset: Input dataset
-        variables: List of variable names to mask
-        terrain_mask: 3D terrain mask array (may be lazy, not yet converted to bool)
-        mask_value: Value to use for masking (0.0 for winds, np.nan for vorticity)
-
-    Returns:
-        xr.Dataset: Dataset with variables masked inside terrain
-    """
-    try:
-        z_dim, y_dim, x_dim = terrain_mask.sizes
-
-        # Convert to bool here, after spatial/vertical slicing
-        # This only loads and converts the small sliced region, not the full mask
-        mask_bool = terrain_mask.astype(bool)
-
-        updates = {}
-        for name, var in dataset.data_vars.items():
-            if (name in variables and
-                z_dim in var.sizes and
-                y_dim in var.sizes and
-                x_dim in var.sizes):
-                updates[name] = var.where(mask_bool.values, mask_value)
-
-        if updates:
-            dataset = dataset.assign(**updates)
-
-        return dataset
-
-    except Exception as e:
-        raise DataProcessingError("staggered variable terrain masking", str(e))
 
 def center_staggered_variables(
     dataset: xr.Dataset,
     coord_info: CoordinateInfo,
     slice_info: SliceInfo,
-    terrain_mask: xr.DataArray,
+    topo: xr.DataArray,
     center_suffix: str = "_c"
 ) -> tuple:
     """
@@ -126,7 +118,7 @@ def center_staggered_variables(
         dataset: Input dataset
         coord_info: Coordinate information
         slice_info: Slice information for periodicity
-        terrain_mask: 3D terrain mask array
+        topo: 2D topography data with terrain top indices
         center_suffix: Suffix for centered variables
 
     Returns:
@@ -142,21 +134,26 @@ def center_staggered_variables(
     if not available_vars:
         return dataset, []
 
-    # Separate winds and vorticities for different masking strategies
-    available_winds = [var for var in available_vars if var in WIND_VARIABLES]
-    available_vorticities = [var for var in available_vars if var in VORTICITY_VARIABLES]
+    ## Separate winds and vorticities for different masking strategies
+    #available_winds = [var for var in available_vars if var in WIND_VARIABLES]
+    #available_vorticities = [var for var in available_vars if var in VORTICITY_VARIABLES]
 
-    # Mask wind variables to 0.0 inside terrain (to avoid affecting averages)
-    if available_winds:
-        dataset = mask_staggered_variables_for_centering(
-            dataset, available_winds, terrain_mask, mask_value=0.0
-        )
+    ## Mask wind variables to 0.0 inside terrain (to avoid affecting averages)
+    #if available_winds:
+    #    dataset = apply_terrain_mask(
+    #        dataset, topo, available_winds, mask_value=0.0
+    #    )
 
-    # Mask vorticity variables to NaN inside terrain
-    if available_vorticities:
-        dataset = mask_staggered_variables_for_centering(
-            dataset, available_vorticities, terrain_mask, mask_value=np.nan
-        )
+    ## Mask vorticity variables to NaN inside terrain
+    #if available_vorticities:
+    #    dataset = apply_terrain_mask(
+    #        dataset, topo, available_vorticities, mask_value=np.nan
+    #    )
+
+    #if available_vars:
+    #    dataset = apply_terrain_mask(
+    #        dataset, topo, available_vars, mask_value=np.nan
+    #    )
 
     new_variables = {}
     new_var_names = []

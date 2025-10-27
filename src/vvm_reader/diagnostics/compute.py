@@ -195,10 +195,10 @@ def separate_file_and_diagnostic_variables(
 
     Example:
         >>> file_vars, diag_vars = separate_file_and_diagnostic_variables(
-        ...     ["u", "v", "T", "RH"]
+        ...     ["u", "v", "t", "rh"]
         ... )
         >>> print(file_vars)  # {'u', 'v'}
-        >>> print(diag_vars)  # {'T', 'RH'}
+        >>> print(diag_vars)  # {'t', 'rh'}
     """
     registry = get_registry()
 
@@ -228,7 +228,7 @@ def get_required_file_variables(diagnostic_variables: List[str]) -> Set[str]:
         Set of file variable names needed
 
     Example:
-        >>> required = get_required_file_variables(["T", "RH"])
+        >>> required = get_required_file_variables(["t", "rh"])
         >>> print(required)  # {'th', 'qv'}
     """
     registry = get_registry()
@@ -252,7 +252,7 @@ def get_required_profiles(diagnostic_variables: List[str]) -> Set[str]:
         Set of profile names needed (e.g., 'PIBAR', 'RHO')
 
     Example:
-        >>> profiles = get_required_profiles(["T", "RH"])
+        >>> profiles = get_required_profiles(["t", "rh"])
         >>> print(profiles)  # {'PIBAR', 'PBAR'}
     """
     registry = get_registry()
@@ -275,8 +275,8 @@ def list_available_diagnostics() -> List[str]:
     Example:
         >>> diagnostics = list_available_diagnostics()
         >>> print(diagnostics)
-        ['CWV', 'DSE', 'IWP', 'LWP', 'MSE', 'MSE_s',
-         'RH', 'T', 'T_v', 'qvs', 'theta_e', 'theta_es', 'theta_v']
+        ['cwv', 'iwp', 'lwp', 'sd', 'hm', 'hms',
+         't', 'tv', 'qvs', 'rh', 'the', 'thes', 'thv']
     """
     registry = get_registry()
     return registry.list_all()
@@ -296,7 +296,7 @@ def get_diagnostic_metadata(variable: str) -> Dict[str, str]:
         KeyError: If variable is not registered
 
     Example:
-        >>> metadata = get_diagnostic_metadata('T')
+        >>> metadata = get_diagnostic_metadata('t')
         >>> print(metadata['long_name'])  # 'Temperature'
         >>> print(metadata['units'])      # 'K'
     """
