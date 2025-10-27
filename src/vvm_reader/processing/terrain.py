@@ -20,7 +20,8 @@ def apply_terrain_mask(
     topo: xr.DataArray,
     variables: list = None,
     mask_value: float = np.nan,
-    vertical_dim: str = VERTICAL_DIM
+    vertical_dim: str = VERTICAL_DIM,
+    vertical_offset: int = 0
 ) -> xr.Dataset:
     """
     Apply terrain masking to 3D variables.
@@ -38,6 +39,7 @@ def apply_terrain_mask(
         variables: List of variable names to mask. If None, mask all 3D variables.
         mask_value: Value to use for masking (default: np.nan, use 0.0 for winds before centering)
         vertical_dim: Name of vertical dimension
+        vertical_offset: Offset for vertical indices when using vertical slicing (0-based)
 
     Returns:
         xr.Dataset: Dataset with terrain-masked variables
@@ -53,9 +55,10 @@ def apply_terrain_mask(
         nz = dataset.sizes[vertical_dim]
         y_dim, x_dim = topo.dims
 
-        # Create 1-based vertical index array
+        # Create 1-based vertical index array accounting for offset
+        # If vertical_offset is provided, adjust k_indices to match the actual vertical levels
         k_indices = xr.DataArray(
-            np.arange(1, nz + 1, dtype=np.int32),
+            np.arange(1 + vertical_offset, nz + 1 + vertical_offset, dtype=np.int32),
             dims=[vertical_dim]
         )
 

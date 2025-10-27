@@ -128,7 +128,7 @@ class VVMDatasetLoader:
         dataset = self._post_process_dataset(
             dataset, params, coord_info, slice_info,
             crop_offsets, vertical_crop_offset, vertical_target_length,
-            needs_centering, read_slice_info, topo
+            needs_centering, read_slice_info, topo, vertical_slice
         )
         
         return dataset
@@ -291,7 +291,7 @@ class VVMDatasetLoader:
     def _post_process_dataset(
         self, dataset, params, coord_info, slice_info,
         crop_offsets, vertical_crop_offset, vertical_target_length,
-        needs_centering, read_slice_info, topo
+        needs_centering, read_slice_info, topo, vertical_slice
     ):
         """Apply all post-processing operations."""
 
@@ -300,6 +300,11 @@ class VVMDatasetLoader:
         # Slice 2D topo for centering and final masking
         topo_center = apply_spatial_selection(topo, coord_info, mask_slice)
         topo_final = apply_spatial_selection(topo, coord_info, slice_info)
+
+        # Calculate vertical offset for terrain masking
+        # This is needed when vertical slicing is applied - the k indices in the dataset
+        # no longer start from 0, but from the slice start index
+        vertical_offset = vertical_slice.start if vertical_slice is not None and vertical_slice.start is not None else 0
 
         # Step 1: Center staggered variables (winds and vorticities) if requested
         created_center_vars = []
@@ -327,7 +332,7 @@ class VVMDatasetLoader:
 
         # Step 3: Apply terrain masking
         if params.processing_options.mask_terrain:
-            dataset = apply_terrain_mask(dataset, topo_final)
+            dataset = apply_terrain_mask(dataset, topo_final, vertical_offset=vertical_offset)
 
         # Step 4: Assign spatial coordinates
         dataset = assign_spatial_coordinates(dataset, coord_info, slice_info)
