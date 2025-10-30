@@ -16,9 +16,36 @@ A Python package for efficiently reading and processing VVM (Vector Vorticity eq
 
 ## Installation
 
+### Option 1: Install from GitHub (for users)
+
 ```bash
-pip install vvm-reader
+# Using uv (Recommended - fast!)
+uv pip install git+https://github.com/ckhsu1225/vvm_reader.git
+
+# Or using pip
+pip install git+https://github.com/ckhsu1225/vvm_reader.git
 ```
+
+### Option 2: Install from source for development
+
+If you want to modify the code:
+
+```bash
+# Clone the repository
+git clone https://github.com/ckhsu1225/vvm_reader.git
+cd vvm_reader
+
+# Install in development mode with uv (Recommended)
+uv pip install -e .
+
+# Or use uv sync (creates/updates .venv automatically)
+uv sync
+
+# Or with pip
+pip install -e .
+```
+
+> **Note**: PyPI distribution is planned for a future release.
 
 ## Quick Start
 
@@ -43,13 +70,14 @@ ds = vvm.open_vvm_dataset(
 # Automatically compute diagnostic variables
 ds = vvm.open_vvm_dataset(
     "/path/to/simulation",
-    variables=["th", "qv", "T", "RH", "MSE"]  # T, RH, MSE auto-computed
+    variables=["th", "qv", "t", "rh", "hm"]  # t, rh, hm auto-computed
 )
 
 # Available diagnostic variables:
-# Thermodynamics: T, T_v, theta_v, theta_e, theta_es
-# Moisture: RH, qvs, CWV, LWP, IWP
-# Energy: DSE, MSE, MSE_s
+# Thermodynamics: t, tv, thv, the, thes
+# Moisture: rh, qvs, cwv, lwp, iwp
+# Energy: sd, hm, hms
+# Dynamics: ws
 
 # Manual control (advanced)
 ds = vvm.open_vvm_dataset(
@@ -57,7 +85,7 @@ ds = vvm.open_vvm_dataset(
     variables=["th", "qv"],
     auto_compute_diagnostics=False
 )
-ds = vvm.compute_diagnostics(ds, ["T", "RH"], "/path/to/simulation")
+ds = vvm.compute_diagnostics(ds, ["t", "rh"], "/path/to/simulation")
 ```
 
 ### Regional Selection
@@ -357,23 +385,23 @@ Examples:
 # Compute thermodynamic diagnostics
 ds = vvm.open_vvm_dataset(
     "/path/to/simulation",
-    variables=["th", "qv", "T", "theta_e", "RH"],
+    variables=["th", "qv", "t", "the", "rh"],
     region=vvm.Region(lon_range=(120, 122), lat_range=(23, 25))
 )
 
 # Access computed variables
-temperature = ds['T']  # Temperature [K]
-theta_e = ds['theta_e']  # Equivalent potential temperature [K]
-rh = ds['RH']  # Relative humidity [%]
+temperature = ds['t']  # Temperature [K]
+theta_e = ds['the']  # Equivalent potential temperature [K]
+rh = ds['rh']  # Relative humidity [%]
 
 # Compute column-integrated variables
 ds_column = vvm.open_vvm_dataset(
     "/path/to/simulation",
-    variables=["qv", "qc", "qr", "CWV", "LWP"]
+    variables=["qv", "qc", "qr", "cwv", "lwp"]
 )
 
-print(f"Column water vapor: {ds_column['CWV'].mean():.2f} kg/m²")
-print(f"Liquid water path: {ds_column['LWP'].mean():.2f} kg/m²")
+print(f"Column water vapor: {ds_column['cwv'].mean():.2f} kg/m²")
+print(f"Liquid water path: {ds_column['lwp'].mean():.2f} kg/m²")
 ```
 
 ### Multi-Regional Analysis
