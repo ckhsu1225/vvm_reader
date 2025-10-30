@@ -349,51 +349,6 @@ def load_indices(
     )
 
 
-def load_time_series(
-    sim_dir: Union[str, Path],
-    variables: Sequence[str],
-    time_range: Optional[Tuple] = None,
-    spatial_mean: bool = False,
-    **kwargs
-) -> xr.Dataset:
-    """
-    Load time series data, optionally computing spatial means.
-
-    Args:
-        sim_dir: Path to simulation directory
-        variables: Variables to load
-        time_range: Time range (start_time, end_time)
-        spatial_mean: Whether to compute spatial means
-        **kwargs: Additional arguments passed to open_vvm_dataset
-
-    Returns:
-        xr.Dataset: Time series dataset
-    """
-    time_selection = None
-    if time_range is not None:
-        time_selection = TimeSelection(time_range=time_range)
-
-    ds = open_vvm_dataset(
-        sim_dir=sim_dir,
-        variables=variables,
-        time_selection=time_selection,
-        **kwargs
-    )
-
-    if spatial_mean:
-        # Compute spatial means, preserving time and vertical dimensions
-        spatial_dims = []
-        if 'x' in ds.sizes:
-            spatial_dims.append('x')
-        if 'y' in ds.sizes:
-            spatial_dims.append('y')
-
-        if spatial_dims:
-            ds = ds.mean(dim=spatial_dims, keep_attrs=True)
-
-    return ds
-
-
 # ============================================================================
 # Export List
 # ============================================================================

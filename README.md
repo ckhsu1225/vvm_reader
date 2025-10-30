@@ -190,16 +190,6 @@ ds = vvm.load_indices(
 )
 ```
 
-### Time Series Analysis
-
-```python
-# Load time series with spatial averaging
-ds = vvm.load_time_series(
-    "/path/to/simulation",
-    variables=["th", "qv"],
-    spatial_mean=True
-)
-```
 
 ## Advanced Features
 
@@ -354,7 +344,6 @@ Examples:
 - `load_surface_data()`: Surface data with automatic vertical range detection
 - `load_region()`: Regional data loading
 - `load_indices()`: Index-based regional loading
-- `load_time_series()`: Time series analysis
 
 ### Diagnostic Functions
 
@@ -426,12 +415,14 @@ for name, region in regions.items():
 ### Time Series Analysis
 
 ```python
-# Domain-averaged time series
-ts_data = vvm.load_time_series(
+# Load all time steps
+ds = vvm.open_vvm_dataset(
     "/path/to/simulation",
-    variables=["th", "qv", "w"],
-    spatial_mean=True
+    variables=["th", "qv", "w"]
 )
+
+# Compute domain-averaged time series (lat, lon are dimensions)
+ts_data = ds.mean(dim=['lat', 'lon'])
 
 # Plot domain-averaged vertical velocity
 import matplotlib.pyplot as plt
@@ -472,8 +463,8 @@ If you use VVM Reader in your research, please cite:
 ```bibtex
 @software{vvm_reader,
   title={VVM Reader: A Python Package for VVM Model Output Analysis},
-  author={Your Name},
+  author={Chun-Kai Hsu},
   year={2025},
-  url={https://github.com/your-repo/vvm-reader}
+  url={https://github.com/ckhsu1225/vvm_reader}
 }
 ```

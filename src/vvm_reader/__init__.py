@@ -37,9 +37,8 @@ from .main import (
     # Convenience functions
     quick_load,
     load_surface_data,
-    load_region, 
+    load_region,
     load_indices,
-    load_time_series,
     
     # Utility functions
     list_available_simulations,
@@ -109,7 +108,6 @@ __all__ = [
     'load_surface_data',
     'load_region',
     'load_indices',
-    'load_time_series',
     
     # Utility functions
     'list_available_simulations',
