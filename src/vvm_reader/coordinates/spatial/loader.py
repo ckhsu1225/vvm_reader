@@ -21,10 +21,6 @@ def load_topo_dataset(sim_dir: Path, engine: Optional[str] = None) -> xr.Dataset
     """
     Load and validate TOPO.nc dataset with caching.
 
-    This function caches up to 32 different simulations to avoid repeatedly
-    reading the same TOPO.nc file. This significantly improves performance
-    when querying multiple types of information from the same simulation.
-
     Args:
         sim_dir: Simulation directory path
         engine: xarray backend engine
@@ -36,8 +32,6 @@ def load_topo_dataset(sim_dir: Path, engine: Optional[str] = None) -> xr.Dataset
         RequiredFileNotFoundError: If TOPO.nc not found
         CoordinateError: If required coordinates are missing
 
-    Note:
-        Cache can be cleared with: load_topo_dataset.cache_clear()
     """
     topo_path = get_simulation_paths(sim_dir)['topo']
     validate_required_file(topo_path, "TOPO.nc")

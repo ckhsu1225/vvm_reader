@@ -172,16 +172,13 @@ def center_staggered_variables(
         if not stagger_dims:
             continue
 
-        # Determine fill value based on variable type and dimension
-        is_wind = var_name in WIND_VARIABLES
-
         # Center the variable based on stagger configuration
         if len(stagger_dims) == 1:
             # Single-direction stagger (u, v, w)
             centered = _center_single_direction(
                 var_data, stagger_dims[0],
                 x_dim, y_dim, vertical_dim,
-                slice_info, is_wind
+                slice_info
             )
         elif len(stagger_dims) == 2:
             # Dual-direction stagger (zeta, eta, xi)
@@ -216,7 +213,6 @@ def _center_single_direction(
     y_dim: str,
     z_dim: str,
     slice_info: SliceInfo,
-    is_wind: bool
 ) -> xr.DataArray:
     """
     Center a variable staggered in a single direction.
@@ -226,7 +222,6 @@ def _center_single_direction(
         stagger_dim: Dimension where variable is staggered ('x', 'y', or 'z')
         x_dim, y_dim, z_dim: Actual dimension names in dataset
         slice_info: Slice information for periodicity
-        is_wind: True for wind variables (use 0.0 for boundary), False for vorticity (use NaN)
 
     Returns:
         Centered variable

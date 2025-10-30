@@ -21,9 +21,6 @@ def read_reference_profiles_from_fort98(sim_dir: Path) -> dict:
     """
     Read reference state profiles (RHO, THBAR, PBAR, PIBAR, QVBAR) from fort.98.
 
-    This function caches up to 16 different simulations to avoid repeatedly
-    parsing the same fort.98 file.
-
     The fort.98 file contains initial state profiles with the format:
     - Header line: "K, RHO(K),THBAR(K),PBAR(K),PIBAR(K),QVBAR(K)"
     - Separator line: "="
@@ -43,8 +40,6 @@ def read_reference_profiles_from_fort98(sim_dir: Path) -> dict:
         RequiredFileNotFoundError: If fort.98 file doesn't exist
         DataProcessingError: If file format is invalid
 
-    Note:
-        Cache can be cleared with: read_reference_profiles_from_fort98.cache_clear()
     """
     fort98_path = sim_dir / FORT98_FILENAME
 
@@ -129,10 +124,6 @@ def read_vertical_levels_from_fort98(sim_dir: Path) -> np.ndarray:
     """
     Read ZT(K) vertical levels from fort.98 file with caching.
 
-    This function caches up to 16 different simulations to avoid repeatedly
-    parsing the same fort.98 file. Parsing fort.98 involves complex string
-    operations, so caching significantly improves performance.
-
     The fort.98 file contains vertical level information with the format:
     - Header line: "K, ZZ(K),ZT(K),FNZ(K),FNT(K)"
     - Separator line: "="
@@ -150,8 +141,6 @@ def read_vertical_levels_from_fort98(sim_dir: Path) -> np.ndarray:
         RequiredFileNotFoundError: If fort.98 file doesn't exist
         DataProcessingError: If file format is invalid
 
-    Note:
-        Cache can be cleared with: read_vertical_levels_from_fort98.cache_clear()
     """
     fort98_path = sim_dir / FORT98_FILENAME
     
