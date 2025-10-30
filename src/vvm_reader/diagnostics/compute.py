@@ -276,7 +276,7 @@ def list_available_diagnostics() -> List[str]:
         >>> diagnostics = list_available_diagnostics()
         >>> print(diagnostics)
         ['cwv', 'iwp', 'lwp', 'sd', 'hm', 'hms',
-         't', 'tv', 'qvs', 'rh', 'the', 'thes', 'thv']
+         't', 'tv', 'qvs', 'rh', 'the', 'thes', 'thv', 'ws']
     """
     registry = get_registry()
     return registry.list_all()

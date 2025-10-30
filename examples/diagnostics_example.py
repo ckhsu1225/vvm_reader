@@ -30,7 +30,7 @@ print("="*70)
 
 from vvm_reader.diagnostics import get_diagnostic_metadata
 
-for var_name in ['T', 'RH', 'MSE', 'CWV']:
+for var_name in ['t', 'rh', 'hm', 'cwv']:
     metadata = get_diagnostic_metadata(var_name)
     print(f"\n{var_name}:")
     print(f"  Long name: {metadata['long_name']}")
@@ -50,7 +50,7 @@ from vvm_reader.diagnostics import (
     get_required_profiles
 )
 
-diagnostic_vars = ['T', 'RH', 'MSE']
+diagnostic_vars = ['t', 'rh', 'hm']
 
 print(f"\nTo compute {diagnostic_vars}:")
 print(f"  Required file variables: {get_required_file_variables(diagnostic_vars)}")
@@ -71,13 +71,13 @@ sim_dir = "/path/to/simulation"
 # Automatically computes T, RH, MSE from th and qv
 ds = vvm.open_vvm_dataset(
     sim_dir,
-    variables=["th", "qv", "T", "RH", "MSE"]
+    variables=["th", "qv", "t", "rh", "hm"]
 )
 
 # T, RH, MSE are automatically computed!
-temperature = ds['T']
-relative_humidity = ds['RH']
-moist_static_energy = ds['MSE']
+temperature = ds['t']
+relative_humidity = ds['rh']
+moist_static_energy = ds['hm']
 """)
 
 # ============================================================================
@@ -99,10 +99,10 @@ ds = vvm.open_vvm_dataset(
 )
 
 # Step 2: Manually compute diagnostic variables when needed
-ds = vvm.compute_diagnostics(ds, ["T", "RH"], sim_dir)
+ds = vvm.compute_diagnostics(ds, ["t", "rh"], sim_dir)
 
 # Step 3: Later, compute more diagnostics
-ds = vvm.compute_diagnostics(ds, ["MSE", "CWV"], sim_dir)
+ds = vvm.compute_diagnostics(ds, ["hm", "cwv"], sim_dir)
 
 # Useful for:
 # - Computing different diagnostics at different stages
@@ -133,7 +133,7 @@ from vvm_reader.diagnostics import get_registry
 registry = get_registry()
 
 print("\nDependency details for selected variables:")
-for var_name in ['T', 'RH', 'theta_e', 'MSE']:
+for var_name in ['t', 'rh', 'the', 'hm']:
     diag_var = registry.get(var_name)
     print(f"\n{var_name}:")
     print(f"  File dependencies: {diag_var.file_dependencies}")
@@ -156,20 +156,14 @@ print("""
    - Appropriate for: weak to moderate convection
    - May be less accurate for: extreme convection (e.g., supercells)
 
-2. CAPE/CIN Implementation:
-   - Currently placeholder implementations (return zeros)
-   - Full parcel theory implementation planned for future release
-   - For production CAPE/CIN, consider other libraries (e.g., MetPy)
-
-3. Required fort.98:
+2. Required fort.98:
    - Most diagnostics require reference profiles from fort.98
    - Ensure fort.98 exists in your simulation directory
    - Profiles used: PIBAR, PBAR, RHO, THBAR, QVBAR
 
-4. Performance:
+3. Performance:
    - Dependency resolution is automatic
    - Variables computed in optimal order
-   - Fort.98 reading is cached (LRU cache)
 """)
 
 print("\n" + "="*70)

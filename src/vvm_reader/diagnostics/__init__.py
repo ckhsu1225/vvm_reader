@@ -37,6 +37,9 @@ Available Diagnostic Variables:
         - hm: Moist static energy
         - hms: Saturation moist static energy
 
+    Dynamics:
+        - ws: Wind speed
+
 Notes:
     - All calculations use PIBAR as background Exner function
     - Typical errors are <2% for most applications
@@ -46,6 +49,7 @@ Notes:
 from . import thermodynamics
 from . import moisture
 from . import energetics
+from . import dynamics
 
 # Import core components
 from .constants import *
@@ -99,6 +103,7 @@ Available Diagnostic Variables ({len(all_vars)}):
         'Thermodynamics': ['t', 'tv', 'thv', 'the', 'thes'],
         'Moisture': ['rh', 'qvs', 'cwv', 'lwp', 'iwp'],
         'Energy': ['sd', 'hm', 'hms'],
+        'Dynamics': ['ws'],
     }
 
     for category, var_list in categories.items():
