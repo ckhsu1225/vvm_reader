@@ -78,7 +78,7 @@ def open_vvm_dataset(
         # Load file and diagnostic variables together (automatic computation)
         >>> ds = open_vvm_dataset(
         ...     "/path/to/sim",
-        ...     variables=["th", "qv", "T", "RH", "MSE"]  # T, RH, MSE auto-computed
+        ...     variables=["th", "qv", "t", "rh", "hm"]  # t, rh, hm auto-computed
         ... )
 
         # Load specific variables with spatial/temporal selection
@@ -97,7 +97,7 @@ def open_vvm_dataset(
         ...     variables=["th", "qv"],
         ...     auto_compute_diagnostics=False
         ... )
-        >>> ds = vvm.compute_diagnostics(ds, ["T", "RH"], sim_dir)
+        >>> ds = vvm.compute_diagnostics(ds, ["t", "rh"], sim_dir)
     """
     sim_path = Path(sim_dir)
 

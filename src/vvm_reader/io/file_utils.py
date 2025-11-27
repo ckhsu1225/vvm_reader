@@ -8,6 +8,7 @@ file searching, date extraction, and directory validation.
 import re
 from pathlib import Path
 from typing import List, Optional, Sequence, Dict
+from functools import lru_cache
 import xarray as xr
 
 from ..core.config import (
@@ -68,6 +69,7 @@ def extract_group_from_filename(filename: str) -> Optional[str]:
 # File and Directory Operations
 # ============================================================================
 
+@lru_cache(maxsize=32)
 def list_group_files(archive_dir: Path, group: str) -> List[Path]:
     """
     List all files for a specific output group.
@@ -82,6 +84,7 @@ def list_group_files(archive_dir: Path, group: str) -> List[Path]:
     pattern = GROUP_FILE_PATTERN.format(group=group)
     return sorted(archive_dir.glob(pattern))
 
+@lru_cache(maxsize=32)
 def list_available_groups(sim_dir: Path) -> List[str]:
     """
     List all available output groups in a simulation.
@@ -105,6 +108,7 @@ def list_available_groups(sim_dir: Path) -> List[str]:
     
     return sorted(groups)
 
+@lru_cache(maxsize=32)
 def list_variables_in_group(sim_dir: Path, group: str, engine: Optional[str] = None) -> List[str]:
     """
     List all variables in a specific output group.

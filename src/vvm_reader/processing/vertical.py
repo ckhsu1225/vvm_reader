@@ -317,52 +317,82 @@ def extract_surface_nearest_values(
         # Convert topo to integer indices
         sfc_indices = surface_level.astype(np.int64)
 
-        if vertical_selection.surface_only:
-            # Replace 3D variables with surface values (remove vertical dimension)
-            new_data_vars = {}
+        # Identify variables that have the vertical dimension
+        vars_with_vertical = [
+            name for name, var in dataset.data_vars.items() 
+            if VERTICAL_DIM in var.dims
+        ]
+        
+        if not vars_with_vertical:
+            return dataset
 
-            for name, var in dataset.data_vars.items():
-                if VERTICAL_DIM in var.sizes:
-                    try:
-                        surface_var = var.isel({VERTICAL_DIM: sfc_indices})
-                        surface_var.attrs.update(var.attrs)
-                        surface_var.encoding = getattr(var, 'encoding', {})
-                        new_data_vars[name] = surface_var
-                    except Exception:
-                        # Keep original variable if extraction fails
-                        new_data_vars[name] = var
-                else:
-                    new_data_vars[name] = var
+        # Optimization 1: Crop vertical levels to the maximum required height
+        # This prevents loading/processing unnecessary vertical levels
+        max_level_needed = int(sfc_indices.max())
+        
+        # Subset only variables with vertical dimension and crop them
+        # Using slice(0, max + 1) because slice end is exclusive
+        ds_subset = dataset[vars_with_vertical].isel({
+            VERTICAL_DIM: slice(0, max_level_needed + 1)
+        })
+
+        # Optimization 2: Vectorized extraction
+        # Extract values at sfc_indices for all 3D variables at once using advanced indexing
+        surface_ds = ds_subset.isel({VERTICAL_DIM: sfc_indices})
+
+        # The extracted surface_ds might still contain the vertical coordinate (e.g., 'lev') 
+        # but as a 2D variable (since it was indexed). 
+        # We drop it to avoid conflicts with the main dataset's 1D vertical coordinate.
+        if VERTICAL_DIM in surface_ds.coords:
+            surface_ds = surface_ds.drop_vars(VERTICAL_DIM)
+
+        if vertical_selection.surface_only:
+            # Strategy: 
+            # 1. Remove all variables using vertical dimension from the original dataset
+            # 2. Merge the new surface variables
+            
+            # Drop the vertical dimension and all associated variables
+            new_ds = dataset.drop_dims(VERTICAL_DIM)
+            
+            # Restore attributes for the surface variables
+            for name in surface_ds.data_vars:
+                if name in dataset:
+                    surface_ds[name].attrs = dataset[name].attrs
+                    surface_ds[name].encoding = getattr(dataset[name], 'encoding', {})
+
+            # Merge surface variables
+            new_ds = new_ds.merge(surface_ds)
 
             # Save surface level indices for diagnostic computation
-            # This allows diagnostics to select the correct profile values
             sfc_indices_var = sfc_indices.copy()
             sfc_indices_var.attrs = {
                 'long_name': 'surface level index',
                 'description': 'Vertical level index used for surface extraction (k = topo + 1)',
                 'units': 'level'
             }
-            new_data_vars['surface_level_index'] = sfc_indices_var
+            new_ds['surface_level_index'] = sfc_indices_var
 
-            return dataset.assign(new_data_vars)
+            return new_ds
         
         else:
-            # Add surface variables with suffix
-            surface_vars = {}
+            # Strategy:
+            # 1. Rename surface variables with suffix
+            # 2. Merge into original dataset
             
-            for name, var in dataset.data_vars.items():
-                if VERTICAL_DIM in var.sizes:
-                    try:
-                        surface_var = var.isel({VERTICAL_DIM: sfc_indices})
-                        surface_var.attrs.update(var.attrs)
-                        surface_var.encoding = getattr(var, 'encoding', {})
-                        
-                        surface_name = f"{name}{vertical_selection.surface_suffix}"
-                        surface_vars[surface_name] = surface_var
-                    except Exception:
-                        continue
+            rename_map = {}
+            for name in surface_ds.data_vars:
+                new_name = f"{name}{vertical_selection.surface_suffix}"
+                rename_map[name] = new_name
+                
+            surface_ds = surface_ds.rename(rename_map)
             
-            return dataset.assign(surface_vars)
+            # Restore/Update attributes
+            for old_name, new_name in rename_map.items():
+                if old_name in dataset:
+                    surface_ds[new_name].attrs = dataset[old_name].attrs
+                    surface_ds[new_name].encoding = getattr(dataset[old_name], 'encoding', {})
+            
+            return dataset.merge(surface_ds)
     
     except Exception as e:
         raise DataProcessingError("surface extraction", str(e))

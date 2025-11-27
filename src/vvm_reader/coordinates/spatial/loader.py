@@ -112,9 +112,10 @@ def prepare_topo_data(topo_ds: xr.Dataset) -> xr.DataArray:
     if topo.ndim != 2:
         raise CoordinateError("topo", f"Expected 2D, got {topo.ndim}D")
 
+    return topo
     # Apply the standard masking rule: convert ocean (0) -> land (1)
     # This ensures k <= topo masking works correctly
-    return _apply_topo_masking_rule(topo)
+    # return _apply_topo_masking_rule(topo)
 
 
 def _apply_topo_masking_rule(topo: xr.DataArray) -> xr.DataArray:

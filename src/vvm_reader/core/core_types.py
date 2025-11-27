@@ -19,6 +19,8 @@ import numpy as np
 TimeValue = Union[str, datetime, np.datetime64]
 TimeRange = Tuple[TimeValue, TimeValue]
 IndexRange = Tuple[int, int]
+TimeIndices = Sequence[int]
+TimeValues = Sequence[TimeValue]
 CoordinateRange = Tuple[float, float]
 ChunkSetting = Optional[Union[str, Dict[str, int]]]
 VariableManifest = Dict[str, Any]
@@ -119,48 +121,116 @@ class Region:
 # Time Selection
 # ============================================================================
 
-@dataclass 
+@dataclass
 class TimeSelection:
     """
     Time selection parameters for data loading.
-    
-    Supports both time-based and index-based selection. When both are specified,
-    index-based selection takes priority for better performance.
-    
+
+    Supports continuous range selection or arbitrary time/index selection.
+    Priority order: time_indices > time_index_range > time_values > time_range
+
     Attributes:
-        time_range: Time range (start_time, end_time)
-        time_index_range: File index range (start_index, end_index) - takes priority
+        time_range: Time range (start_time, end_time) - continuous interval
+        time_index_range: File index range (start_index, end_index) - continuous interval
+        time_indices: Arbitrary list of file indices (e.g., [0, 5, 10, 20])
+        time_values: Arbitrary list of time values (e.g., specific datetimes)
+
+    Examples:
+        # Continuous time range
+        TimeSelection(time_range=(datetime(2001, 5, 20, 12, 0), datetime(2001, 5, 20, 18, 0)))
+
+        # Continuous index range
+        TimeSelection(time_index_range=(72, 108))
+
+        # Arbitrary indices (e.g., every 10th file)
+        TimeSelection(time_indices=[0, 10, 20, 30, 40])
+
+        # Arbitrary time values
+        TimeSelection(time_values=[datetime(2001, 5, 20, 12, 0), datetime(2001, 5, 20, 18, 0)])
     """
     time_range: Optional[TimeRange] = None
     time_index_range: Optional[IndexRange] = None
-    
+    time_indices: Optional[TimeIndices] = None
+    time_values: Optional[TimeValues] = None
+
     def __post_init__(self):
         """Validate time selection parameters."""
         _validate_index_range("time_index_range", self.time_index_range)
-        
-        # Warn if both time and index ranges are specified
-        if self.time_range is not None and self.time_index_range is not None:
+
+        # Validate time_indices
+        if self.time_indices is not None:
+            if not isinstance(self.time_indices, (list, tuple, np.ndarray, Sequence)):
+                raise TypeError("time_indices must be a sequence (list, tuple, or array)")
+            if len(self.time_indices) == 0:
+                raise ValueError("time_indices must not be empty")
+            for idx in self.time_indices:
+                if not isinstance(idx, (int, np.integer)):
+                    raise TypeError(f"time_indices must contain only integers, got {type(idx)}")
+                if idx < 0:
+                    raise ValueError(f"time_indices must contain only non-negative integers, got {idx}")
+
+        # Validate time_values
+        if self.time_values is not None:
+            if not isinstance(self.time_values, (list, tuple, np.ndarray, Sequence)):
+                raise TypeError("time_values must be a sequence (list, tuple, or array)")
+            if len(self.time_values) == 0:
+                raise ValueError("time_values must not be empty")
+
+        # Warn if multiple selection methods are specified
+        specified = sum([
+            self.time_range is not None,
+            self.time_index_range is not None,
+            self.time_indices is not None,
+            self.time_values is not None
+        ])
+
+        if specified > 1:
             import warnings
-            warnings.warn("Both time_range and time_index_range specified. Using time_index_range (index-based).")
-    
+            priority_msg = "Multiple time selections specified. Priority: time_indices > time_index_range > time_values > time_range"
+            warnings.warn(priority_msg)
+
     @property
     def has_selection(self) -> bool:
         """Check if any time selection is defined."""
-        return self.time_range is not None or self.time_index_range is not None
-    
+        return (self.time_range is not None or
+                self.time_index_range is not None or
+                self.time_indices is not None or
+                self.time_values is not None)
+
     @property
     def uses_index_selection(self) -> bool:
-        """Check if index-based selection is being used."""
-        return self.time_index_range is not None
-    
+        """Check if continuous index-based selection is being used."""
+        return self.time_index_range is not None and self.time_indices is None
+
     @property
     def uses_time_selection(self) -> bool:
-        """Check if time-based selection is being used."""
-        return self.time_range is not None
-    
-    def get_effective_selection(self) -> Union[IndexRange, TimeRange, None]:
-        """Get the effective time selection (index takes priority)."""
-        return self.time_index_range if self.time_index_range is not None else self.time_range
+        """Check if continuous time-based selection is being used."""
+        return (self.time_range is not None and
+                self.time_indices is None and
+                self.time_values is None)
+
+    @property
+    def uses_arbitrary_indices(self) -> bool:
+        """Check if arbitrary index selection is being used."""
+        return self.time_indices is not None
+
+    @property
+    def uses_arbitrary_times(self) -> bool:
+        """Check if arbitrary time value selection is being used."""
+        return self.time_values is not None and self.time_indices is None
+
+    def get_effective_selection(self) -> Union[TimeIndices, IndexRange, TimeValues, TimeRange, None]:
+        """
+        Get the effective time selection based on priority.
+        Priority: time_indices > time_index_range > time_values > time_range
+        """
+        if self.time_indices is not None:
+            return self.time_indices
+        if self.time_index_range is not None:
+            return self.time_index_range
+        if self.time_values is not None:
+            return self.time_values
+        return self.time_range
 
 # ============================================================================
 # Vertical Selection
@@ -258,8 +328,8 @@ class ProcessingOptions:
             for key, value in self.chunks.items():
                 if not isinstance(key, str):
                     raise ValueError("Chunk keys must be strings")
-                if not isinstance(value, int) or value <= 0:
-                    raise ValueError("Chunk values must be positive integers")
+                if not isinstance(value, int) or value == 0 or value < -1:
+                    raise ValueError("Chunk values must be positive integers or -1 (no chunking)")
 
 # ============================================================================
 # Load Parameters Summary

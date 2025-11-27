@@ -25,9 +25,9 @@ logger = logging.getLogger(__name__)
     name='sd',
     profile_dependencies=['PIBAR'],
     diagnostic_dependencies=['t'],
-    long_name='Dry static energy',
+    long_name='dry static energy',
     units='J kg-1',
-    description='Dry static energy (Cp*T + g*z)',
+    description='dry static energy (Cp*T + g*z)',
 )
 def compute_dry_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
                                diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
@@ -60,7 +60,7 @@ def compute_dry_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
     DSE = Cp_d * T + g * z
 
     DSE.attrs = {
-        'long_name': 'Dry static energy',
+        'long_name': 'dry static energy',
         'units': 'J kg-1',
         'description': 'Cp*T + g*z'
     }
@@ -73,9 +73,9 @@ def compute_dry_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
     file_dependencies=['qv'],
     profile_dependencies=['PIBAR'],
     diagnostic_dependencies=['t'],
-    long_name='Moist static energy',
+    long_name='moist static energy',
     units='J kg-1',
-    description='Moist static energy including latent heat from vapor and ice',
+    description='moist static energy including latent heat from vapor and ice',
 )
 def compute_moist_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
                                  diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
@@ -139,7 +139,7 @@ def compute_moist_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
     MSE = Cp_d * T + g * z + latent_heat_term
 
     MSE.attrs = {
-        'long_name': 'Moist static energy',
+        'long_name': 'moist static energy',
         'units': 'J kg-1',
         'description': f'Cp*T + g*z + Lv*qv - Lf*q_ice; ice phase {ice_status}',
         'reference_state': 'liquid water at 0°C'
@@ -152,9 +152,9 @@ def compute_moist_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
     name='hms',
     profile_dependencies=['PIBAR', 'PBAR'],
     diagnostic_dependencies=['t'],
-    long_name='Saturation moist static energy',
+    long_name='saturation moist static energy',
     units='J kg-1',
-    description='Moist static energy at saturation with temperature-dependent latent heat',
+    description='moist static energy at saturation with temperature-dependent latent heat',
 )
 def compute_saturation_moist_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
                                             diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
@@ -230,7 +230,7 @@ def compute_saturation_moist_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
         logger.debug("MSE_s: Using temperature-dependent L_mix (includes ice phase)")
 
     MSE_s.attrs = {
-        'long_name': 'Saturation moist static energy',
+        'long_name': 'saturation moist static energy',
         'units': 'J kg-1',
         'description': f'Cp*T + g*z + L_mix*qs at saturation; phase {"temperature-dependent (includes ice)" if has_ice else "pure liquid water"}',
         'reference_state': 'liquid water at 0°C'

@@ -127,7 +127,7 @@ def center_staggered_variables(
     Returns:
         tuple: (updated_dataset, list_of_new_variable_names)
     """
-    from ..core.config import STAGGERED_VARIABLES, STAGGER_CONFIG, WIND_VARIABLES, VORTICITY_VARIABLES
+    from ..core.config import STAGGERED_VARIABLES, STAGGER_CONFIG
 
     vertical_dim = VERTICAL_DIM
     x_dim, y_dim = coord_info.x_dim, coord_info.y_dim
@@ -136,27 +136,6 @@ def center_staggered_variables(
     available_vars = [var for var in STAGGERED_VARIABLES if var in dataset.data_vars]
     if not available_vars:
         return dataset, []
-
-    ## Separate winds and vorticities for different masking strategies
-    #available_winds = [var for var in available_vars if var in WIND_VARIABLES]
-    #available_vorticities = [var for var in available_vars if var in VORTICITY_VARIABLES]
-
-    ## Mask wind variables to 0.0 inside terrain (to avoid affecting averages)
-    #if available_winds:
-    #    dataset = apply_terrain_mask(
-    #        dataset, topo, available_winds, mask_value=0.0
-    #    )
-
-    ## Mask vorticity variables to NaN inside terrain
-    #if available_vorticities:
-    #    dataset = apply_terrain_mask(
-    #        dataset, topo, available_vorticities, mask_value=np.nan
-    #    )
-
-    #if available_vars:
-    #    dataset = apply_terrain_mask(
-    #        dataset, topo, available_vars, mask_value=np.nan
-    #    )
 
     new_variables = {}
     new_var_names = []
@@ -206,6 +185,22 @@ def center_staggered_variables(
     return dataset, new_var_names
 
 
+def _safe_shift(var: xr.DataArray, shifts: dict) -> xr.DataArray:
+    """
+    Safely shift variable, handling dask edge cases where dimension size is small.
+    
+    When using dask, shifting a dimension with size <= shift amount can cause
+    ZeroDivisionError or other issues during chunk calculation. This function
+    checks for this condition and returns an all-NaN array instead.
+    """
+    # Check if any shift operation would crash dask (size <= shift)
+    for dim, shift in shifts.items():
+        if dim in var.sizes and var.sizes[dim] <= abs(shift):
+             return xr.full_like(var, np.nan)
+    
+    return var.shift(shifts).fillna(np.nan)
+
+
 def _center_single_direction(
     var: xr.DataArray,
     stagger_dim: str,
@@ -246,10 +241,13 @@ def _center_single_direction(
         # Periodic: use roll
         var_shifted = var.roll({actual_dim: 1}, roll_coords=False)
     else:
-        # Non-periodic: use shift with fill value
-        var_shifted = var.shift({actual_dim: 1}).fillna(np.nan)
+        # Non-periodic: use safe shift
+        var_shifted = _safe_shift(var, {actual_dim: 1})
 
-    centered = 0.5 * (var + var_shifted)
+    # Average the 2 points (xarray handles NaN properly in mean)
+    # Stack the 2 points along a temporary dimension and take mean
+    stacked = xr.concat([var, var_shifted], dim='_temp_avg')
+    centered = stacked.mean(dim='_temp_avg')
     return centered
 
 
@@ -305,23 +303,23 @@ def _center_dual_direction(
     if periodic1:
         p2 = var.roll({dim1: 1}, roll_coords=False)
     else:
-        p2 = var.shift({dim1: 1}).fillna(np.nan)
+        p2 = _safe_shift(var, {dim1: 1})
 
     # Point 3: shifted in dim2 (i, j-1)
     if periodic2:
         p3 = var.roll({dim2: 1}, roll_coords=False)
     else:
-        p3 = var.shift({dim2: 1}).fillna(np.nan)
+        p3 = _safe_shift(var, {dim2: 1})
 
     # Point 4: shifted in both dims (i-1, j-1)
     if periodic1 and periodic2:
         p4 = var.roll({dim1: 1, dim2: 1}, roll_coords=False)
     elif periodic1 and not periodic2:
-        p4 = var.roll({dim1: 1}, roll_coords=False).shift({dim2: 1}).fillna(np.nan)
+        p4 = _safe_shift(var.roll({dim1: 1}, roll_coords=False), {dim2: 1})
     elif not periodic1 and periodic2:
-        p4 = var.shift({dim1: 1}).fillna(np.nan).roll({dim2: 1}, roll_coords=False)
+        p4 = _safe_shift(var.roll({dim2: 1}, roll_coords=False), {dim1: 1})
     else:
-        p4 = var.shift({dim1: 1, dim2: 1}).fillna(np.nan)
+        p4 = _safe_shift(var, {dim1: 1, dim2: 1})
 
     # Average the 4 points (xarray handles NaN properly in mean)
     # Stack the 4 points along a temporary dimension and take mean

@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 @register_diagnostic(
     name='ws',
     file_dependencies=['u', 'v'],
-    long_name='Wind speed',
+    long_name='wind speed',
     units='m s-1',
-    description='Horizontal wind speed calculated from u and v components',
+    description='horizontal wind speed calculated from u and v components',
     standard_name='wind_speed'
 )
 def compute_wind_speed(ds: xr.Dataset, profiles: xr.Dataset,  # noqa: ARG001
@@ -53,10 +53,10 @@ def compute_wind_speed(ds: xr.Dataset, profiles: xr.Dataset,  # noqa: ARG001
     ws = np.sqrt(u**2 + v**2)
 
     ws.attrs = {
-        'long_name': 'Wind speed',
+        'long_name': 'wind speed',
         'units': 'm s-1',
         'standard_name': 'wind_speed',
-        'description': 'Horizontal wind speed (magnitude of horizontal wind vector)'
+        'description': 'horizontal wind speed (magnitude of horizontal wind vector)'
     }
 
     return ws

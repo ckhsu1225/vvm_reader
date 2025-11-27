@@ -331,7 +331,14 @@ class VVMDatasetLoader:
             )
 
         # Step 3: Apply terrain masking
-        if params.processing_options.mask_terrain:
+        # Optimization: Skip masking if we only want the surface layer, as it is always above terrain
+        # and valid. Masking the full 3D field is unnecessary overhead in this case.
+        skip_masking = (
+            params.vertical_selection.surface_nearest and 
+            params.vertical_selection.surface_only
+        )
+        
+        if params.processing_options.mask_terrain and not skip_masking:
             dataset = apply_terrain_mask(dataset, topo_final, vertical_offset=vertical_offset)
 
         # Step 4: Assign spatial coordinates

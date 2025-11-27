@@ -156,9 +156,9 @@ def saturation_mixing_ratio(T: xr.DataArray, P: xr.DataArray, over_ice: bool = N
     name='t',
     file_dependencies=['th'],
     profile_dependencies=['PIBAR'],
-    long_name='Temperature',
+    long_name='temperature',
     units='K',
-    description='Absolute temperature computed from potential temperature using background Exner function',
+    description='absolute temperature computed from potential temperature using background Exner function',
     standard_name='air_temperature'
 )
 def compute_temperature(ds: xr.Dataset, profiles: xr.Dataset,
@@ -204,9 +204,9 @@ def compute_temperature(ds: xr.Dataset, profiles: xr.Dataset,
     file_dependencies=['th', 'qv'],
     profile_dependencies=['PIBAR'],
     diagnostic_dependencies=['t'],
-    long_name='Virtual temperature',
+    long_name='virtual temperature',
     units='K',
-    description='Virtual temperature accounting for moisture and hydrometeor effects on air density',
+    description='virtual temperature accounting for moisture and hydrometeor effects on air density',
     standard_name='virtual_temperature'
 )
 def compute_virtual_temperature(ds: xr.Dataset, profiles: xr.Dataset,
@@ -255,10 +255,10 @@ def compute_virtual_temperature(ds: xr.Dataset, profiles: xr.Dataset,
         hydrometeor_status = "not available (vapor only)"
 
     T_v.attrs = {
-        'long_name': 'Virtual temperature',
+        'long_name': 'virtual temperature',
         'units': 'K',
         'standard_name': 'virtual_temperature',
-        'description': f'Temperature of dry air with same density; hydrometeors {hydrometeor_status}'
+        'description': f'temperature of dry air with same density; hydrometeors {hydrometeor_status}'
     }
 
     return T_v
@@ -267,9 +267,9 @@ def compute_virtual_temperature(ds: xr.Dataset, profiles: xr.Dataset,
 @register_diagnostic(
     name='thv',
     file_dependencies=['th', 'qv'],
-    long_name='Virtual potential temperature',
+    long_name='virtual potential temperature',
     units='K',
-    description='Potential temperature accounting for moisture and hydrometeor effects',
+    description='potential temperature accounting for moisture and hydrometeor effects',
 )
 def compute_virtual_potential_temperature(ds: xr.Dataset, profiles: xr.Dataset,
                                           diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
@@ -314,9 +314,9 @@ def compute_virtual_potential_temperature(ds: xr.Dataset, profiles: xr.Dataset,
         hydrometeor_status = "not available (vapor only)"
 
     theta_v.attrs = {
-        'long_name': 'Virtual potential temperature',
+        'long_name': 'virtual potential temperature',
         'units': 'K',
-        'description': f'Potential temperature of dry air with same density; hydrometeors {hydrometeor_status}'
+        'description': f'potential temperature of dry air with same density; hydrometeors {hydrometeor_status}'
     }
 
     return theta_v
@@ -331,9 +331,9 @@ def compute_virtual_potential_temperature(ds: xr.Dataset, profiles: xr.Dataset,
     file_dependencies=['th', 'qv'],
     profile_dependencies=['PIBAR', 'PBAR'],
     diagnostic_dependencies=['t'],
-    long_name='Equivalent potential temperature',
+    long_name='equivalent potential temperature',
     units='K',
-    description='Potential temperature that air would have if all moisture condensed',
+    description='potential temperature that air would have if all moisture condensed',
 )
 def compute_equivalent_potential_temperature(ds: xr.Dataset, profiles: xr.Dataset,
                                              diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
@@ -391,7 +391,7 @@ def compute_equivalent_potential_temperature(ds: xr.Dataset, profiles: xr.Datase
     theta_e = th * np.exp(latent_term)
 
     theta_e.attrs = {
-        'long_name': 'Equivalent potential temperature',
+        'long_name': 'equivalent potential temperature',
         'units': 'K',
         'description': f'Bolton (1980) formula; ice phase {ice_status}',
         'reference_state': 'liquid water at 0°C'
@@ -405,9 +405,9 @@ def compute_equivalent_potential_temperature(ds: xr.Dataset, profiles: xr.Datase
     file_dependencies=['th'],
     profile_dependencies=['PIBAR', 'PBAR'],
     diagnostic_dependencies=['t'],
-    long_name='Saturation equivalent potential temperature',
+    long_name='saturation equivalent potential temperature',
     units='K',
-    description='Equivalent potential temperature at saturation',
+    description='equivalent potential temperature at saturation',
 )
 def compute_saturation_equivalent_potential_temperature(
     ds: xr.Dataset,
@@ -478,7 +478,7 @@ def compute_saturation_equivalent_potential_temperature(
         logger.debug("theta_es: Using temperature-dependent L_mix (includes ice phase)")
 
     theta_es.attrs = {
-        'long_name': 'Saturation equivalent potential temperature',
+        'long_name': 'saturation equivalent potential temperature',
         'units': 'K',
         'description': f'Bolton (1980) formula at saturation with L_mix; phase {"temperature-dependent (includes ice)" if has_ice else "pure liquid water"}',
         'reference_state': 'liquid water at 0°C'
@@ -508,9 +508,9 @@ def compute_pressure_from_exner(pi: xr.DataArray) -> xr.DataArray:
     P = P0 * pi ** (1.0 / kappa)
 
     P.attrs = {
-        'long_name': 'Pressure',
+        'long_name': 'pressure',
         'units': 'Pa',
-        'description': 'Computed from Exner function'
+        'description': 'computed from Exner function'
     }
 
     return P
@@ -534,7 +534,7 @@ def compute_exner_from_pressure(P: xr.DataArray) -> xr.DataArray:
     pi.attrs = {
         'long_name': 'Exner function',
         'units': 'dimensionless',
-        'description': 'Computed from pressure'
+        'description': 'computed from pressure'
     }
 
     return pi

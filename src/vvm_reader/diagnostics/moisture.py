@@ -27,9 +27,9 @@ logger = logging.getLogger(__name__)
     file_dependencies=['qv'],
     profile_dependencies=['PIBAR', 'PBAR'],
     diagnostic_dependencies=['t'],
-    long_name='Relative humidity',
+    long_name='relative humidity',
     units='%',
-    description='Relative humidity with respect to liquid water',
+    description='relative humidity with respect to liquid water',
     standard_name='relative_humidity'
 )
 def compute_relative_humidity(ds: xr.Dataset, profiles: xr.Dataset,
@@ -65,10 +65,10 @@ def compute_relative_humidity(ds: xr.Dataset, profiles: xr.Dataset,
     RH = RH.clip(min=0., max=100.0)
 
     RH.attrs = {
-        'long_name': 'Relative humidity',
+        'long_name': 'relative humidity',
         'units': '%',
         'standard_name': 'relative_humidity',
-        'description': 'Relative humidity with respect to liquid water'
+        'description': 'relative humidity with respect to liquid water'
     }
 
     return RH
@@ -78,9 +78,9 @@ def compute_relative_humidity(ds: xr.Dataset, profiles: xr.Dataset,
     name='qvs',
     profile_dependencies=['PIBAR', 'PBAR'],
     diagnostic_dependencies=['t'],
-    long_name='Saturation mixing ratio',
+    long_name='saturation mixing ratio',
     units='kg kg-1',
-    description='Saturation water vapor mixing ratio',
+    description='saturation water vapor mixing ratio',
 )
 def compute_saturation_mixing_ratio(ds: xr.Dataset, profiles: xr.Dataset,
                                     diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
@@ -104,9 +104,9 @@ def compute_saturation_mixing_ratio(ds: xr.Dataset, profiles: xr.Dataset,
     qs = saturation_mixing_ratio(T, P)
 
     qs.attrs = {
-        'long_name': 'Saturation mixing ratio',
+        'long_name': 'saturation mixing ratio',
         'units': 'kg kg-1',
-        'description': 'Saturation water vapor mixing ratio over liquid water'
+        'description': 'saturation water vapor mixing ratio over liquid water'
     }
 
     return qs
@@ -120,9 +120,9 @@ def compute_saturation_mixing_ratio(ds: xr.Dataset, profiles: xr.Dataset,
     name='cwv',
     file_dependencies=['qv'],
     profile_dependencies=['RHO'],
-    long_name='Column water vapor',
+    long_name='column water vapor',
     units='kg m-2',
-    description='Vertically integrated water vapor (precipitable water)',
+    description='vertically integrated water vapor (precipitable water)',
     standard_name='atmosphere_mass_content_of_water_vapor'
 )
 def compute_column_water_vapor(ds: xr.Dataset, profiles: xr.Dataset,
@@ -175,10 +175,10 @@ def compute_column_water_vapor(ds: xr.Dataset, profiles: xr.Dataset,
     CWV = integrand.integrate('lev')
 
     CWV.attrs = {
-        'long_name': 'Column water vapor',
+        'long_name': 'column water vapor',
         'units': 'kg m-2',
         'standard_name': 'atmosphere_mass_content_of_water_vapor',
-        'description': 'Vertically integrated water vapor (precipitable water)'
+        'description': 'vertically integrated water vapor (precipitable water)'
     }
 
     return CWV
@@ -188,9 +188,9 @@ def compute_column_water_vapor(ds: xr.Dataset, profiles: xr.Dataset,
     name='lwp',
     file_dependencies=['qc', 'qr'],
     profile_dependencies=['RHO'],
-    long_name='Liquid water path',
+    long_name='liquid water path',
     units='kg m-2',
-    description='Vertically integrated liquid water (cloud + rain)',
+    description='vertically integrated liquid water (cloud + rain)',
 )
 def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
                               diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
@@ -257,9 +257,9 @@ def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
     LWP = integrand.integrate('lev')
 
     LWP.attrs = {
-        'long_name': 'Liquid water path',
+        'long_name': 'liquid water path',
         'units': 'kg m-2',
-        'description': 'Vertically integrated liquid water (cloud + rain)'
+        'description': 'vertically integrated liquid water (cloud + rain)'
     }
 
     return LWP
@@ -269,9 +269,9 @@ def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
     name='iwp',
     file_dependencies=['qi', 'qrim'],
     profile_dependencies=['RHO'],
-    long_name='Ice water path',
+    long_name='ice water path',
     units='kg m-2',
-    description='Vertically integrated ice water',
+    description='vertically integrated ice water',
 )
 def compute_ice_water_path(ds: xr.Dataset, profiles: xr.Dataset,
                            diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
@@ -338,9 +338,9 @@ def compute_ice_water_path(ds: xr.Dataset, profiles: xr.Dataset,
     IWP = integrand.integrate('lev')
 
     IWP.attrs = {
-        'long_name': 'Ice water path',
+        'long_name': 'ice water path',
         'units': 'kg m-2',
-        'description': 'Vertically integrated ice water (cloud ice + riming ice)'
+        'description': 'vertically integrated ice water (cloud ice + riming ice)'
     }
 
     return IWP

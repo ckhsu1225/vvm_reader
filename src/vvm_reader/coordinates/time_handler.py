@@ -115,7 +115,11 @@ def filter_files_by_time(
     """
     Filter files based on time selection criteria.
 
-    Uses index-based filtering when available (faster), falls back to time-based filtering.
+    Supports:
+    - Arbitrary index selection (time_indices) - highest priority
+    - Continuous index range (time_index_range)
+    - Arbitrary time value selection (time_values)
+    - Continuous time range (time_range)
 
     Args:
         files: List of file paths
@@ -126,9 +130,22 @@ def filter_files_by_time(
     """
     result: List[Path] = []
 
-    # Determine filtering method (index-based takes priority)
-    if time_selection.uses_index_selection:
-        # Fast index-based filtering
+    # Priority 1: Arbitrary indices (fastest)
+    if time_selection.uses_arbitrary_indices:
+        # Convert to set for O(1) lookup
+        allowed_indices = set(time_selection.time_indices)
+
+        for file_path in files:
+            try:
+                index = parse_index_from_filename(file_path)
+            except Exception:
+                continue
+
+            if index in allowed_indices:
+                result.append(file_path)
+
+    # Priority 2: Continuous index range (fast)
+    elif time_selection.uses_index_selection:
         i0, i1 = time_selection.time_index_range
 
         for file_path in files:
@@ -137,13 +154,25 @@ def filter_files_by_time(
             except Exception:
                 continue
 
-            if not (i0 <= index <= i1):
-                continue
+            if i0 <= index <= i1:
+                result.append(file_path)
 
-            result.append(file_path)
+    # Priority 3: Arbitrary time values
+    elif time_selection.uses_arbitrary_times:
+        # Normalize all target times to np.datetime64
+        target_times = set()
+        for time_val in time_selection.time_values:
+            normalized = normalize_time_value(time_val)
+            target_times.add(normalized)
 
+        for file_path in files:
+            timestamp = read_time_from_file(file_path)
+
+            if timestamp in target_times:
+                result.append(file_path)
+
+    # Priority 4: Continuous time range
     elif time_selection.uses_time_selection:
-        # Time-based filtering (requires time computation for each file)
         tr_start, tr_end = normalize_time_range(time_selection.time_range)
 
         for file_path in files:
@@ -155,8 +184,9 @@ def filter_files_by_time(
                 continue
 
             result.append(file_path)
+
+    # No time filtering - include all files
     else:
-        # No time filtering - include all files
         for file_path in files:
             result.append(file_path)
 
