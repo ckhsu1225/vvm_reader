@@ -316,6 +316,11 @@ def extract_surface_nearest_values(
     try:
         # Convert topo to integer indices
         sfc_indices = surface_level.astype(np.int64)
+        
+        # Ensure indices are computed (numpy array) before using for indexing
+        # This is critical for performance with dask arrays and to avoid "vindex does not support dask" errors
+        if hasattr(sfc_indices, "compute"):
+            sfc_indices = sfc_indices.compute()
 
         # Identify variables that have the vertical dimension
         vars_with_vertical = [
@@ -326,15 +331,8 @@ def extract_surface_nearest_values(
         if not vars_with_vertical:
             return dataset
 
-        # Optimization 1: Crop vertical levels to the maximum required height
-        # This prevents loading/processing unnecessary vertical levels
-        max_level_needed = int(sfc_indices.max())
-        
-        # Subset only variables with vertical dimension and crop them
-        # Using slice(0, max + 1) because slice end is exclusive
-        ds_subset = dataset[vars_with_vertical].isel({
-            VERTICAL_DIM: slice(0, max_level_needed + 1)
-        })
+        # Optimization 1: Filter variables only
+        ds_subset = dataset[vars_with_vertical]
 
         # Optimization 2: Vectorized extraction
         # Extract values at sfc_indices for all 3D variables at once using advanced indexing
@@ -360,11 +358,15 @@ def extract_surface_nearest_values(
                     surface_ds[name].attrs = dataset[name].attrs
                     surface_ds[name].encoding = getattr(dataset[name], 'encoding', {})
 
-            # Merge surface variables
-            new_ds = new_ds.merge(surface_ds)
+            # Merge surface variables - skip checks for speed as we know coords align
+            new_ds = new_ds.merge(surface_ds, compat='override', join='override')
 
             # Save surface level indices for diagnostic computation
             sfc_indices_var = sfc_indices.copy()
+            # If sfc_indices was computed to numpy, wrap it back to DataArray for the dataset
+            if not isinstance(sfc_indices_var, (xr.DataArray, xr.Variable)):
+                 sfc_indices_var = xr.DataArray(sfc_indices, dims=surface_level.dims, coords=surface_level.coords)
+
             sfc_indices_var.attrs = {
                 'long_name': 'surface level index',
                 'description': 'Vertical level index used for surface extraction (k = topo + 1)',
@@ -392,7 +394,8 @@ def extract_surface_nearest_values(
                     surface_ds[new_name].attrs = dataset[old_name].attrs
                     surface_ds[new_name].encoding = getattr(dataset[old_name], 'encoding', {})
             
-            return dataset.merge(surface_ds)
+            # Skip checks for speed as we know coords align
+            return dataset.merge(surface_ds, compat='override', join='override')
     
     except Exception as e:
         raise DataProcessingError("surface extraction", str(e))
