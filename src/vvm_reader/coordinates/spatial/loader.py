@@ -11,11 +11,37 @@ import xarray as xr
 from ...core.config import LON_DIM, LAT_DIM, TOPO_VAR, get_simulation_paths
 from ...core.core_types import CoordinateInfo
 from ...core.exceptions import CoordinateError, validate_required_file
+from ...core.logging_config import get_logger
 
 
 # ============================================================================
 # TOPO.nc Loading and Validation
 # ============================================================================
+
+def _find_topo_variable(ds: xr.Dataset) -> Optional[str]:
+    """
+    Find the topography variable name in the dataset.
+
+    Checks for common case variations of the topo variable name.
+
+    Args:
+        ds: Dataset to search
+
+    Returns:
+        Variable name if found, None otherwise
+    """
+    # Check for the configured name first
+    if TOPO_VAR in ds:
+        return TOPO_VAR
+    
+    # Check for common case variations
+    topo_variations = ['TOPO', 'Topo', 'topo']
+    for var_name in topo_variations:
+        if var_name in ds:
+            return var_name
+    
+    return None
+
 
 def load_topo_dataset(sim_dir: Path, engine: Optional[str] = None) -> xr.Dataset:
     """
@@ -26,7 +52,7 @@ def load_topo_dataset(sim_dir: Path, engine: Optional[str] = None) -> xr.Dataset
         engine: xarray backend engine
 
     Returns:
-        xr.Dataset: Loaded TOPO dataset
+        xr.Dataset: Loaded TOPO dataset with standardized variable names
 
     Raises:
         RequiredFileNotFoundError: If TOPO.nc not found
@@ -37,15 +63,25 @@ def load_topo_dataset(sim_dir: Path, engine: Optional[str] = None) -> xr.Dataset
     validate_required_file(topo_path, "TOPO.nc")
 
     try:
-        topo_ds = xr.open_dataset(topo_path, engine=engine)
+        topo_ds = xr.open_dataset(topo_path, engine=engine, decode_times=False)
     except Exception as e:
         raise CoordinateError("TOPO.nc", f"Failed to open file: {e}")
 
-    # Validate required variables
-    required_vars = [LON_DIM, LAT_DIM, TOPO_VAR]
-    missing_vars = [var for var in required_vars if var not in topo_ds]
+    # Validate required coordinate variables
+    required_coord_vars = [LON_DIM, LAT_DIM]
+    missing_vars = [var for var in required_coord_vars if var not in topo_ds]
+    
+    # Find the topo variable (handles case variations)
+    actual_topo_var = _find_topo_variable(topo_ds)
+    if actual_topo_var is None:
+        missing_vars.append(TOPO_VAR)
+    
     if missing_vars:
         raise CoordinateError("TOPO.nc", f"Missing required variables: {missing_vars}")
+
+    # Rename topo variable to standard name if needed
+    if actual_topo_var is not None and actual_topo_var != TOPO_VAR:
+        topo_ds = topo_ds.rename({actual_topo_var: TOPO_VAR})
 
     return topo_ds
 
@@ -138,6 +174,9 @@ def extract_terrain_height(topo_ds: xr.Dataset) -> xr.DataArray:
     """
     Extract terrain height from TOPO.nc and convert from km to meters.
 
+    If the 'height' variable is missing (common in simulations without terrain),
+    returns a zero-filled array with a warning.
+
     Args:
         topo_ds: TOPO dataset
 
@@ -145,10 +184,40 @@ def extract_terrain_height(topo_ds: xr.Dataset) -> xr.DataArray:
         xr.DataArray: Terrain height in meters (lat, lon)
 
     Raises:
-        CoordinateError: If height variable not found or invalid
+        CoordinateError: If topo variable is missing or dimensions are invalid
     """
+    import numpy as np
+    
+    logger = get_logger('coordinates.spatial')
+    
     if "height" not in topo_ds:
-        raise CoordinateError("TOPO.nc", "Terrain height variable 'height' is required")
+        # Create zero-height array for simulations without terrain
+        logger.warning(
+            "TOPO.nc missing 'height' variable. "
+            "Assuming no terrain (height=0). This is common for ocean/flat simulations."
+        )
+        
+        # Get dimensions from topo variable (handle case variations)
+        actual_topo_var = _find_topo_variable(topo_ds)
+        if actual_topo_var is None:
+            raise CoordinateError("TOPO.nc", f"Required variable '{TOPO_VAR}' (or case variation) not found")
+        
+        topo = topo_ds[actual_topo_var]
+        
+        # Create zero-filled array with same shape and coordinates
+        height_m = xr.DataArray(
+            np.zeros(topo.shape, dtype=np.float32),
+            dims=topo.dims,
+            coords=topo.coords,
+            attrs={
+                'units': 'm',
+                'long_name': 'terrain height',
+                'standard_name': 'surface_altitude',
+                '_note': 'Zero-filled: original height variable missing from TOPO.nc'
+            },
+            name='terrain_height'
+        )
+        return height_m
 
     height = topo_ds["height"]
 
