@@ -45,43 +45,97 @@ def open_vvm_dataset(
     *,
     groups: Optional[Sequence[str]] = None,
     variables: Optional[Sequence[str]] = None,
+    # Structured parameter objects (for advanced usage)
     region: Optional[Region] = None,
     time_selection: Optional[TimeSelection] = None,
     vertical_selection: Optional[VerticalSelection] = None,
     processing_options: Optional[ProcessingOptions] = None,
+    # Flat parameters for Region (simpler API)
+    lon_range: Optional[Tuple[float, float]] = None,
+    lat_range: Optional[Tuple[float, float]] = None,
+    x_range: Optional[Tuple[int, int]] = None,
+    y_range: Optional[Tuple[int, int]] = None,
+    # Flat parameters for TimeSelection (simpler API)
+    time_range: Optional[Tuple] = None,
+    time_index_range: Optional[Tuple[int, int]] = None,
+    time_indices: Optional[Sequence[int]] = None,
+    time_values: Optional[Sequence] = None,
+    # Flat parameters for VerticalSelection (simpler API)
+    vertical_index_range: Optional[Tuple[int, int]] = None,
+    height_range: Optional[Tuple[float, float]] = None,
+    surface_nearest: Optional[bool] = None,
+    surface_only: Optional[bool] = None,
+    # Other options
     var_manifest: Optional[Union[str, Path, dict]] = None,
     auto_compute_diagnostics: bool = True,
 ) -> xr.Dataset:
     """
-    Load VVM dataset with structured parameters.
+    Load VVM dataset with flexible parameter options.
 
-    This is the main interface for loading VVM data using structured parameter objects
-    for better organization and type safety. Automatically computes diagnostic variables
-    when requested in the variables list.
+    This is the main interface for loading VVM data. Supports both:
+    1. Simple flat parameters (recommended for most use cases)
+    2. Structured parameter objects (for advanced usage)
+
+    When both flat parameters and object parameters are provided, flat parameters
+    take priority and override the corresponding values in the objects.
 
     Args:
         sim_dir: Path to simulation directory
         groups: Output groups to load (e.g., ["L.Dynamic", "L.Radiation"])
         variables: Specific variables to load (can include both file and diagnostic variables)
-        region: Spatial region selection
-        time_selection: Time selection parameters
-        vertical_selection: Vertical level selection parameters
-        processing_options: Data processing options
+
+        # Structured parameter objects (advanced)
+        region: Spatial region selection object
+        time_selection: Time selection parameters object
+        vertical_selection: Vertical level selection parameters object
+        processing_options: Data processing options object
+
+        # Flat parameters for spatial selection (simple)
+        lon_range: Longitude range (min_lon, max_lon) in degrees
+        lat_range: Latitude range (min_lat, max_lat) in degrees
+        x_range: X-index range (min_x, max_x) - takes priority over lon_range
+        y_range: Y-index range (min_y, max_y) - takes priority over lat_range
+
+        # Flat parameters for time selection (simple)
+        time_range: Time range (start_time, end_time) as datetime objects
+        time_index_range: File index range (start_index, end_index)
+        time_indices: Arbitrary list of file indices (e.g., [0, 5, 10, 20])
+        time_values: Arbitrary list of time values
+
+        # Flat parameters for vertical selection (simple)
+        vertical_index_range: Vertical index range (start_level, end_level)
+        height_range: Height range (min_height, max_height) in meters
+        surface_nearest: Extract surface-nearest values
+        surface_only: Keep only surface values (removes vertical dimension)
+
+        # Other options
         var_manifest: Variable manifest (path, dict, or None for auto-load)
         auto_compute_diagnostics: Automatically compute diagnostic variables (default: True)
-            Set to False to disable automatic computation and compute manually later.
 
     Returns:
         xr.Dataset: Loaded and processed VVM dataset
 
     Examples:
-        # Load file and diagnostic variables together (automatic computation)
+        # Simple usage with flat parameters (recommended)
         >>> ds = open_vvm_dataset(
         ...     "/path/to/sim",
-        ...     variables=["th", "qv", "t", "rh", "hm"]  # t, rh, hm auto-computed
+        ...     variables=["th", "qv", "t"],
+        ...     lon_range=(120, 122),
+        ...     lat_range=(23, 25),
+        ...     time_index_range=(0, 36),
+        ...     height_range=(0, 5000)
         ... )
 
-        # Load specific variables with spatial/temporal selection
+        # Load with index-based selection
+        >>> ds = open_vvm_dataset(
+        ...     "/path/to/sim",
+        ...     variables=["u", "v", "w"],
+        ...     x_range=(100, 200),
+        ...     y_range=(50, 150),
+        ...     time_index_range=(0, 10)
+        ... )
+
+        # Advanced usage with structured objects
         >>> region = Region(lon_range=(120, 122), lat_range=(23, 25))
         >>> time_sel = TimeSelection(time_index_range=(0, 36))
         >>> ds = open_vvm_dataset(
@@ -91,14 +145,46 @@ def open_vvm_dataset(
         ...     time_selection=time_sel
         ... )
 
-        # Disable automatic diagnostic computation (manual control)
+        # Mixed: use object as base, override with flat params
+        >>> region = Region(lon_range=(120, 125), lat_range=(22, 26))
         >>> ds = open_vvm_dataset(
         ...     "/path/to/sim",
-        ...     variables=["th", "qv"],
-        ...     auto_compute_diagnostics=False
+        ...     region=region,
+        ...     lon_range=(121, 122)  # Override lon_range only
         ... )
-        >>> ds = vvm.compute_diagnostics(ds, ["t", "rh"], sim_dir)
     """
+    # Merge flat parameters with object parameters
+    # Flat parameters take priority over object parameters
+
+    # Build Region
+    effective_region = region or Region()
+    if lon_range is not None or lat_range is not None or x_range is not None or y_range is not None:
+        effective_region = Region(
+            lon_range=lon_range if lon_range is not None else effective_region.lon_range,
+            lat_range=lat_range if lat_range is not None else effective_region.lat_range,
+            x_range=x_range if x_range is not None else effective_region.x_range,
+            y_range=y_range if y_range is not None else effective_region.y_range,
+        )
+
+    # Build TimeSelection
+    effective_time = time_selection or TimeSelection()
+    if time_range is not None or time_index_range is not None or time_indices is not None or time_values is not None:
+        effective_time = TimeSelection(
+            time_range=time_range if time_range is not None else effective_time.time_range,
+            time_index_range=time_index_range if time_index_range is not None else effective_time.time_index_range,
+            time_indices=time_indices if time_indices is not None else effective_time.time_indices,
+            time_values=time_values if time_values is not None else effective_time.time_values,
+        )
+
+    # Build VerticalSelection
+    effective_vertical = vertical_selection or VerticalSelection()
+    if vertical_index_range is not None or height_range is not None or surface_nearest is not None or surface_only is not None:
+        effective_vertical = VerticalSelection(
+            index_range=vertical_index_range if vertical_index_range is not None else effective_vertical.index_range,
+            height_range=height_range if height_range is not None else effective_vertical.height_range,
+            surface_nearest=surface_nearest if surface_nearest is not None else effective_vertical.surface_nearest,
+            surface_only=surface_only if surface_only is not None else effective_vertical.surface_only,
+        )
     sim_path = Path(sim_dir)
 
     # Separate file variables and diagnostic variables
@@ -141,9 +227,9 @@ def open_vvm_dataset(
     params = LoadParameters(
         groups=groups,
         variables=file_vars,
-        region=region or Region(),
-        time_selection=time_selection or TimeSelection(),
-        vertical_selection=vertical_selection or VerticalSelection(),
+        region=effective_region,
+        time_selection=effective_time,
+        vertical_selection=effective_vertical,
         processing_options=processing_options or ProcessingOptions(),
         var_manifest=var_manifest
     )

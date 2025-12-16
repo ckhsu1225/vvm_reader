@@ -91,67 +91,78 @@ ds = vvm.compute_diagnostics(ds, ["t", "rh"], "/path/to/simulation")
 ### Regional Selection
 
 ```python
-# Coordinate-based selection
-region = vvm.Region(
+# Simple: pass ranges directly (recommended)
+ds = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    variables=["u", "v", "w"],
     lon_range=(120.0, 122.0),
     lat_range=(23.0, 25.0)
 )
 
+# Index-based selection (more precise)
 ds = vvm.open_vvm_dataset(
     "/path/to/simulation",
-    variables=["u", "v", "w"],
-    region=region
-)
-
-# Index-based selection (more precise)
-region = vvm.Region(
     x_range=(100, 200),
     y_range=(50, 150)
 )
 
+# Advanced: using Region object
+region = vvm.Region(lon_range=(120.0, 122.0), lat_range=(23.0, 25.0))
 ds = vvm.open_vvm_dataset("/path/to/simulation", region=region)
 ```
 
 ### Time Selection
 
 ```python
-from datetime import datetime
-
-# Time-based selection
-time_sel = vvm.TimeSelection(
-    time_range=(
-        datetime(2001, 5, 20, 12, 0),
-        datetime(2001, 5, 20, 18, 0)
-    )
-)
-
-# Index-based selection (faster)
-time_sel = vvm.TimeSelection(
-    time_index_range=(72, 108)  # Files 000072.nc to 000108.nc
-)
-
+# Simple: pass time range directly (recommended)
 ds = vvm.open_vvm_dataset(
     "/path/to/simulation",
-    time_selection=time_sel
+    time_index_range=(0, 36)  # Files 000000.nc to 000036.nc
 )
+
+# Using datetime range
+from datetime import datetime
+ds = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    time_range=(datetime(2001, 5, 20, 12, 0), datetime(2001, 5, 20, 18, 0))
+)
+
+# Advanced: using TimeSelection object
+time_sel = vvm.TimeSelection(time_index_range=(72, 108))
+ds = vvm.open_vvm_dataset("/path/to/simulation", time_selection=time_sel)
 ```
 
 ### Vertical Selection
 
 ```python
-# Height-based selection
-vert_sel = vvm.VerticalSelection(
-    height_range=(0, 5000)  # 0 to 5km height
+# Simple: pass height range directly (recommended)
+ds = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    height_range=(0, 5000)  # 0 to 5km
 )
 
 # Index-based selection (faster)
-vert_sel = vvm.VerticalSelection(
-    index_range=(1, 25)  # Levels 1 to 25
-)
-
 ds = vvm.open_vvm_dataset(
     "/path/to/simulation",
-    vertical_selection=vert_sel
+    vertical_index_range=(1, 25)  # Levels 1 to 25
+)
+
+# Advanced: using VerticalSelection object
+vert_sel = vvm.VerticalSelection(height_range=(0, 5000))
+ds = vvm.open_vvm_dataset("/path/to/simulation", vertical_selection=vert_sel)
+```
+
+### Combined Selection
+
+```python
+# Load with all selections at once (simple and clean!)
+ds = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    variables=["th", "qv", "t", "rh"],
+    lon_range=(120, 122),
+    lat_range=(23, 25),
+    time_index_range=(0, 36),
+    height_range=(0, 5000)
 )
 ```
 
