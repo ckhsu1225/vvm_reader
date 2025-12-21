@@ -186,49 +186,38 @@ def compute_column_water_vapor(ds: xr.Dataset, profiles: xr.Dataset,
 
 @register_diagnostic(
     name='lwp',
-    file_dependencies=['qc', 'qr'],
+    file_dependencies=['qc'],
     profile_dependencies=['RHO'],
     long_name='liquid water path',
     units='kg m-2',
-    description='vertically integrated liquid water (cloud + rain)',
+    description='vertically integrated cloud liquid water',
 )
 def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
                               diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
     """
-    Compute liquid water path.
+    Compute liquid water path (cloud liquid water only).
 
     Formula:
-        LWP = ∫ ρ × (qc + qr) dz
+        LWP = ∫ ρ × qc dz
 
-    where qc is cloud water and qr is rain water mixing ratio.
+    where qc is cloud water mixing ratio.
 
     Args:
-        ds: Dataset containing 'qc', 'qr'
+        ds: Dataset containing 'qc'
         profiles: Dictionary containing 'RHO'
 
     Returns:
         Liquid water path [kg/m²]
     """
     # Check if required variables exist
-    if 'qc' not in ds and 'qr' not in ds:
-        logger.warning("LWP calculation requires 'qc' and/or 'qr'")
+    if 'qc' not in ds:
+        logger.warning("LWP calculation requires 'qc'")
         return None
 
-    # Sum available liquid water species
-    ql_total = None
-    if 'qc' in ds:
-        ql_total = ds['qc']
-    if 'qr' in ds:
-        if ql_total is None:
-            ql_total = ds['qr']
-        else:
-            ql_total = ql_total + ds['qr']
-
-    if ql_total is None:
-        return None
+    qc = ds['qc']
 
     # Check vertical dimension
-    if 'lev' not in ql_total.dims:
+    if 'lev' not in qc.dims:
         logger.warning("LWP calculation requires vertical dimension 'lev'")
         return None
 
@@ -247,7 +236,7 @@ def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
 
     # profiles['RHO'] is xr.DataArray with lev coordinate
     # xarray will automatically align coordinates
-    integrand = profiles['RHO'] * ql_total
+    integrand = profiles['RHO'] * qc
 
     # Handle terrain masking: NaN values below terrain should not contribute to integral
     # Replace NaN with 0 before integration (terrain has no liquid water)
@@ -259,7 +248,7 @@ def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
     LWP.attrs = {
         'long_name': 'liquid water path',
         'units': 'kg m-2',
-        'description': 'vertically integrated liquid water (cloud + rain)'
+        'description': 'vertically integrated cloud liquid water'
     }
 
     return LWP
@@ -267,7 +256,7 @@ def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
 
 @register_diagnostic(
     name='iwp',
-    file_dependencies=['qi', 'qrim'],
+    file_dependencies=['qi'],
     profile_dependencies=['RHO'],
     long_name='ice water path',
     units='kg m-2',
@@ -279,37 +268,26 @@ def compute_ice_water_path(ds: xr.Dataset, profiles: xr.Dataset,
     Compute ice water path.
 
     Formula:
-        IWP = ∫ ρ × (qi + qrim) dz
+        IWP = ∫ ρ × qi dz
 
-    where qi is cloud ice and qrim is riming ice mixing ratio.
+    where qi is the total ice mixing ratio (includes all ice species).
 
     Args:
-        ds: Dataset containing 'qi', 'qrim'
+        ds: Dataset containing 'qi'
         profiles: Dictionary containing 'RHO'
 
     Returns:
         Ice water path [kg/m²]
     """
     # Check if required variables exist
-    if 'qi' not in ds and 'qrim' not in ds:
-        logger.warning("IWP calculation requires 'qi' and/or 'qrim'")
+    if 'qi' not in ds:
+        logger.warning("IWP calculation requires 'qi'")
         return None
 
-    # Sum available ice species
-    qi_total = None
-    if 'qi' in ds:
-        qi_total = ds['qi']
-    if 'qrim' in ds:
-        if qi_total is None:
-            qi_total = ds['qrim']
-        else:
-            qi_total = qi_total + ds['qrim']
-
-    if qi_total is None:
-        return None
+    qi = ds['qi']
 
     # Check vertical dimension
-    if 'lev' not in qi_total.dims:
+    if 'lev' not in qi.dims:
         logger.warning("IWP calculation requires vertical dimension 'lev'")
         return None
 
@@ -328,7 +306,7 @@ def compute_ice_water_path(ds: xr.Dataset, profiles: xr.Dataset,
 
     # profiles['RHO'] is xr.DataArray with lev coordinate
     # xarray will automatically align coordinates
-    integrand = profiles['RHO'] * qi_total
+    integrand = profiles['RHO'] * qi
 
     # Handle terrain masking: NaN values below terrain should not contribute to integral
     # Replace NaN with 0 before integration (terrain has no ice water)
@@ -340,7 +318,7 @@ def compute_ice_water_path(ds: xr.Dataset, profiles: xr.Dataset,
     IWP.attrs = {
         'long_name': 'ice water path',
         'units': 'kg m-2',
-        'description': 'vertically integrated ice water (cloud ice + riming ice)'
+        'description': 'vertically integrated ice water'
     }
 
     return IWP

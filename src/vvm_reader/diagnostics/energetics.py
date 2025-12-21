@@ -82,19 +82,19 @@ def compute_moist_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
     """
     Compute moist static energy.
 
-    Automatically includes ice phase latent heat effects if qi and/or qrim
-    are present in the dataset. The reference state is liquid water at 0°C.
+    Automatically includes ice phase latent heat effects if qi is present
+    in the dataset. The reference state is liquid water at 0°C.
 
     Energy contributions (relative to liquid water at 0°C):
         - Water vapor (qv): +L_v (energy needed to evaporate from liquid)
         - Liquid water (qc, qr): 0 (reference state, not included in formula)
-        - Ice (qi, qrim): -L_f (energy released during freezing)
+        - Ice (qi): -L_f (energy released during freezing)
 
     Formula:
-        MSE = Cp × T + g × z + L_v × qv - L_f × q_ice
+        MSE = Cp × T + g × z + L_v × qv - L_f × qi
 
     Args:
-        ds: Dataset containing 'qv' and optionally 'qi', 'qrim', with vertical coordinate 'lev'
+        ds: Dataset containing 'qv' and optionally 'qi', with vertical coordinate 'lev'
         profiles: Dictionary containing reference profiles
         diagnostics: Dictionary containing 'T'
 
@@ -121,7 +121,7 @@ def compute_moist_static_energy(ds: xr.Dataset, profiles: xr.Dataset,
     q_ice = 0.0
     ice_components = []
 
-    for var in ['qi', 'qrim']:
+    for var in ['qi']:
         if var in ds.data_vars:
             q_ice = q_ice + ds[var]
             ice_components.append(var)

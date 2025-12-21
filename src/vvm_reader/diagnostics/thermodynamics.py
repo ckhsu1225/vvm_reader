@@ -214,18 +214,18 @@ def compute_virtual_temperature(ds: xr.Dataset, profiles: xr.Dataset,
     """
     Compute virtual temperature.
 
-    Automatically includes all available hydrometeors (qc, qi, qr, qrim) in the
+    Automatically includes all available hydrometeors (qc, qi, qr) in the
     calculation. Hydrometeors increase air density without contributing to pressure,
     thus affecting buoyancy.
 
     Formula:
-        T_v = T × (1 + qv/ε) / (1 + qv + qc + qi + qr + qrim)
+        T_v = T × (1 + qv/ε) / (1 + qv + qc + qi + qr)
 
     Or equivalently:
         T_v = T × (1 + (1/ε - 1) × qv - q_condensate)
 
     Args:
-        ds: Dataset containing 'qv' and optionally 'qc', 'qi', 'qr', 'qrim'
+        ds: Dataset containing 'qv' and optionally 'qc', 'qi', 'qr'
         profiles: Dataset containing reference profiles
         diagnostics: Dictionary containing 'T' (temperature)
 
@@ -239,7 +239,7 @@ def compute_virtual_temperature(ds: xr.Dataset, profiles: xr.Dataset,
     q_condensate = 0.0
     condensate_components = []
 
-    for var in ['qc', 'qi', 'qr', 'qrim']:
+    for var in ['qc', 'qi', 'qr']:
         if var in ds.data_vars:
             q_condensate = q_condensate + ds[var]
             condensate_components.append(var)
@@ -276,15 +276,15 @@ def compute_virtual_potential_temperature(ds: xr.Dataset, profiles: xr.Dataset,
     """
     Compute virtual potential temperature.
 
-    Automatically includes all available hydrometeors (qc, qi, qr, qrim) in the
+    Automatically includes all available hydrometeors (qc, qi, qr) in the
     calculation. This is the potential temperature that dry air would have to
     have the same density as the moist air with all hydrometeors.
 
     Formula:
-        θ_v = θ × (1 + qv/ε) / (1 + qv + qc + qi + qr + qrim)
+        θ_v = θ × (1 + qv/ε) / (1 + qv + qc + qi + qr)
 
     Args:
-        ds: Dataset containing 'th', 'qv' and optionally 'qc', 'qi', 'qr', 'qrim'
+        ds: Dataset containing 'th', 'qv' and optionally 'qc', 'qi', 'qr'
         profiles: Dataset containing reference profiles
         diagnostics: Dictionary of previously computed diagnostic variables
 
@@ -298,7 +298,7 @@ def compute_virtual_potential_temperature(ds: xr.Dataset, profiles: xr.Dataset,
     q_condensate = 0.0
     condensate_components = []
 
-    for var in ['qc', 'qi', 'qr', 'qrim']:
+    for var in ['qc', 'qi', 'qr']:
         if var in ds.data_vars:
             q_condensate = q_condensate + ds[var]
             condensate_components.append(var)
@@ -340,19 +340,19 @@ def compute_equivalent_potential_temperature(ds: xr.Dataset, profiles: xr.Datase
     """
     Compute equivalent potential temperature using Bolton's formula.
 
-    Automatically includes ice phase latent heat effects if qi and/or qrim
-    are present in the dataset. The reference state is liquid water at 0°C.
+    Automatically includes ice phase latent heat effects if qi is present
+    in the dataset. The reference state is liquid water at 0°C.
 
     Energy contributions (relative to liquid water at 0°C):
         - Water vapor (qv): +L_v (energy needed to evaporate from liquid)
         - Liquid water (qc, qr): 0 (reference state, not included in formula)
-        - Ice (qi, qrim): -L_f (energy released during freezing)
+        - Ice (qi): -L_f (energy released during freezing)
 
     Formula:
-        θ_e = θ × exp((L_v × qv - L_f × q_ice) / (Cp × T))
+        θ_e = θ × exp((L_v × qv - L_f × qi) / (Cp × T))
 
     Args:
-        ds: Dataset containing 'th', 'qv' and optionally 'qi', 'qrim'
+        ds: Dataset containing 'th', 'qv' and optionally 'qi'
         profiles: Dataset containing reference profiles
         diagnostics: Dictionary containing 'T'
 
@@ -375,7 +375,7 @@ def compute_equivalent_potential_temperature(ds: xr.Dataset, profiles: xr.Datase
     q_ice = 0.0
     ice_components = []
 
-    for var in ['qi', 'qrim']:
+    for var in ['qi']:
         if var in ds.data_vars:
             q_ice = q_ice + ds[var]
             ice_components.append(var)
