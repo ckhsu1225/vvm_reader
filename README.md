@@ -45,8 +45,6 @@ uv sync
 pip install -e .
 ```
 
-> **Note**: PyPI distribution is planned for a future release.
-
 ## Quick Start
 
 ### Basic Usage
@@ -114,7 +112,7 @@ ds = vvm.open_vvm_dataset("/path/to/simulation", region=region)
 ### Time Selection
 
 ```python
-# Simple: pass time range directly (recommended)
+# Contiguous index range (recommended for most cases)
 ds = vvm.open_vvm_dataset(
     "/path/to/simulation",
     time_index_range=(0, 36)  # Files 000000.nc to 000036.nc
@@ -127,6 +125,12 @@ ds = vvm.open_vvm_dataset(
     time_range=(datetime(2001, 5, 20, 12, 0), datetime(2001, 5, 20, 18, 0))
 )
 
+# Arbitrary time indices (for non-contiguous selection)
+ds = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    time_indices=[0, 6, 12, 24, 48]  # Specific file indices
+)
+
 # Advanced: using TimeSelection object
 time_sel = vvm.TimeSelection(time_index_range=(72, 108))
 ds = vvm.open_vvm_dataset("/path/to/simulation", time_selection=time_sel)
@@ -135,16 +139,28 @@ ds = vvm.open_vvm_dataset("/path/to/simulation", time_selection=time_sel)
 ### Vertical Selection
 
 ```python
-# Simple: pass height range directly (recommended)
+# Contiguous height range (recommended for most cases)
 ds = vvm.open_vvm_dataset(
     "/path/to/simulation",
     height_range=(0, 5000)  # 0 to 5km
 )
 
-# Index-based selection (faster)
+# Index-based contiguous selection (faster)
 ds = vvm.open_vvm_dataset(
     "/path/to/simulation",
     vertical_index_range=(1, 25)  # Levels 1 to 25
+)
+
+# Arbitrary heights (selects nearest levels)
+ds = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    heights=[500, 1000, 3000, 5000]  # Specific heights in meters
+)
+
+# Arbitrary level indices (for non-contiguous selection)
+ds = vvm.open_vvm_dataset(
+    "/path/to/simulation",
+    level_indices=[0, 5, 10, 20]  # Specific level indices
 )
 
 # Advanced: using VerticalSelection object
