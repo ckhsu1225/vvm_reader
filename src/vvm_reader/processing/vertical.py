@@ -4,7 +4,8 @@ VVM Reader Vertical Level Processing
 This module handles vertical coordinate processing including level selection and fort.98 reading.
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
+from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
 import xarray as xr
@@ -203,6 +204,100 @@ def read_vertical_levels_from_fort98(sim_dir: Path) -> np.ndarray:
     return np.array(zt_values, dtype=np.float64)
 
 # ============================================================================
+# Vertical Selection Types and Helpers
+# ============================================================================
+
+@dataclass
+class VerticalSelectionInfo:
+    """
+    Information about resolved vertical selection.
+    
+    Attributes:
+        read_selection: Slice or array for reading data (may include extra levels for centering)
+        final_positions: Positions of final indices within expanded array (for arbitrary selection)
+        is_contiguous: Whether selection is contiguous (slice) or arbitrary (array)
+        original_indices: Original requested indices (for arbitrary selection)
+    """
+    read_selection: Union[slice, np.ndarray, None]
+    final_positions: Optional[np.ndarray] = None
+    is_contiguous: bool = True
+    original_indices: Optional[np.ndarray] = None
+
+
+def resolve_heights_to_nearest_indices(
+    heights: np.ndarray,
+    levels: np.ndarray
+) -> np.ndarray:
+    """
+    Convert heights to nearest level indices.
+    
+    Args:
+        heights: Array of target heights in meters
+        levels: Array of available vertical levels in meters
+        
+    Returns:
+        Array of nearest level indices
+    """
+    indices = np.array([np.argmin(np.abs(levels - h)) for h in heights])
+    return np.unique(indices)  # Remove duplicates and sort
+
+
+def expand_indices_for_centering(
+    indices: np.ndarray,
+    needs_z_centering: bool
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Expand indices to include neighbors needed for z-staggered centering.
+    
+    Maintains boundary behavior consistent with slice-based centering:
+    - Only adds k-1 when k > 0 (same as extend_vertical_slice_for_centering)
+    - Does not add k+1 (_safe_shift will produce NaN at boundaries)
+    
+    Args:
+        indices: Original level indices
+        needs_z_centering: Whether z-direction centering (w, eta, xi) is needed
+        
+    Returns:
+        Tuple of (expanded_indices, final_positions):
+            - expanded_indices: All indices to read (including neighbors)
+            - final_positions: Positions of original indices in expanded array
+    """
+    if not needs_z_centering:
+        return indices, np.arange(len(indices))
+    
+    expanded = set(indices)
+    for k in indices:
+        # Consistent with extend_vertical_slice_for_centering: only add k-1 when k > 0
+        if k > 0:
+            expanded.add(k - 1)
+    
+    expanded_indices = np.array(sorted(expanded))
+    final_positions = np.searchsorted(expanded_indices, indices)
+    
+    return expanded_indices, final_positions
+
+
+def filter_to_final_indices(
+    dataset: xr.Dataset,
+    final_positions: np.ndarray
+) -> xr.Dataset:
+    """
+    Extract final level indices from expanded dataset after centering.
+    
+    Args:
+        dataset: Dataset with expanded vertical levels
+        final_positions: Positions of final indices in the expanded array
+        
+    Returns:
+        Dataset with only the originally requested levels
+    """
+    if VERTICAL_DIM not in dataset.dims:
+        return dataset
+    
+    return dataset.isel({VERTICAL_DIM: final_positions})
+
+
+# ============================================================================
 # Vertical Slice Resolution
 # ============================================================================
 
@@ -253,6 +348,67 @@ def resolve_vertical_slice(
             )
     
     return None
+
+
+def resolve_vertical_selection(
+    sim_dir: Path,
+    vertical_selection: VerticalSelection,
+    needs_z_centering: bool = False
+) -> VerticalSelectionInfo:
+    """
+    Resolve vertical selection for all modes (contiguous and arbitrary).
+    
+    Handles both slice-based (contiguous) and array-based (arbitrary) selection.
+    For arbitrary selection with z-centering needed, automatically expands indices
+    to include neighbors required for centering.
+    
+    Priority: level_indices > heights > index_range > height_range
+    
+    Args:
+        sim_dir: Simulation directory path
+        vertical_selection: Vertical selection parameters
+        needs_z_centering: Whether z-direction centering (w, eta, xi) is needed
+        
+    Returns:
+        VerticalSelectionInfo with read_selection, final_positions, and is_contiguous flag
+        
+    Raises:
+        RequiredFileNotFoundError: If fort.98 needed but not found
+        DataProcessingError: If conversion fails
+    """
+    # Priority 1: Arbitrary indices (level_indices)
+    if vertical_selection.uses_arbitrary_indices:
+        indices = np.array(sorted(set(vertical_selection.level_indices)))
+        expanded, final_positions = expand_indices_for_centering(indices, needs_z_centering)
+        return VerticalSelectionInfo(
+            read_selection=expanded,
+            final_positions=final_positions,
+            is_contiguous=False,
+            original_indices=indices
+        )
+    
+    # Priority 2: Arbitrary heights
+    if vertical_selection.uses_arbitrary_heights:
+        levels = read_vertical_levels_from_fort98(sim_dir)
+        heights = np.array(vertical_selection.heights)
+        indices = resolve_heights_to_nearest_indices(heights, levels)
+        expanded, final_positions = expand_indices_for_centering(indices, needs_z_centering)
+        return VerticalSelectionInfo(
+            read_selection=expanded,
+            final_positions=final_positions,
+            is_contiguous=False,
+            original_indices=indices
+        )
+    
+    # Priority 3 & 4: Contiguous selection (index_range or height_range)
+    # Use existing resolve_vertical_slice for backward compatibility
+    vertical_slice = resolve_vertical_slice(sim_dir, vertical_selection)
+    return VerticalSelectionInfo(
+        read_selection=vertical_slice,
+        final_positions=None,
+        is_contiguous=True,
+        original_indices=None
+    )
 
 def extend_vertical_slice_for_centering(
     vertical_slice: Optional[slice],

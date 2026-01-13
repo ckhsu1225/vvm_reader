@@ -241,18 +241,22 @@ class VerticalSelection:
     """
     Vertical level selection and processing parameters.
     
-    Supports both height-based and index-based selection. When both are specified,
-    index-based selection takes priority for better performance.
+    Supports continuous range selection or arbitrary level selection.
+    Priority order: level_indices > heights > index_range > height_range
     
     Attributes:
-        index_range: Vertical index range (start_level, end_level) - takes priority
-        height_range: Height range (min_height, max_height) in meters
+        index_range: Vertical index range (start_level, end_level) - continuous
+        height_range: Height range (min_height, max_height) in meters - continuous
+        level_indices: Arbitrary list of level indices (e.g., [0, 5, 10, 20])
+        heights: Arbitrary list of heights in meters (e.g., [500, 1000, 3000])
         surface_nearest: Extract surface-nearest values
         surface_only: Keep only surface values (remove vertical dimension)
         surface_suffix: Suffix for surface variables
     """
     index_range: Optional[IndexRange] = None
     height_range: Optional[CoordinateRange] = None
+    level_indices: Optional[Sequence[int]] = None
+    heights: Optional[Sequence[float]] = None
     surface_nearest: bool = False
     surface_only: bool = False
     surface_suffix: str = "_sfc"
@@ -265,11 +269,45 @@ class VerticalSelection:
         # Additional validation: heights should be non-negative
         if self.height_range is not None and self.height_range[0] < 0:
             raise ValueError("height_range values must be non-negative")
+        
+        # Validate level_indices
+        if self.level_indices is not None:
+            if not isinstance(self.level_indices, (list, tuple, np.ndarray, Sequence)):
+                raise TypeError("level_indices must be a sequence (list, tuple, or array)")
+            if len(self.level_indices) == 0:
+                raise ValueError("level_indices must not be empty")
+            for idx in self.level_indices:
+                if not isinstance(idx, (int, np.integer)):
+                    raise TypeError(f"level_indices must contain only integers, got {type(idx)}")
+                if idx < 0:
+                    raise ValueError(f"level_indices must contain only non-negative integers, got {idx}")
+        
+        # Validate heights
+        if self.heights is not None:
+            if not isinstance(self.heights, (list, tuple, np.ndarray, Sequence)):
+                raise TypeError("heights must be a sequence (list, tuple, or array)")
+            if len(self.heights) == 0:
+                raise ValueError("heights must not be empty")
+            for h in self.heights:
+                if not isinstance(h, (int, float, np.integer, np.floating)):
+                    raise TypeError(f"heights must contain only numbers, got {type(h)}")
+                if h < 0:
+                    raise ValueError(f"heights must contain only non-negative values, got {h}")
             
-        # Warn if both height and index ranges are specified
-        if self.height_range is not None and self.index_range is not None:
+        # Warn if multiple selection methods are specified
+        specified = sum([
+            self.index_range is not None,
+            self.height_range is not None,
+            self.level_indices is not None,
+            self.heights is not None
+        ])
+        
+        if specified > 1:
             import warnings
-            warnings.warn("Both height_range and index_range specified. Using index_range (index-based).")
+            warnings.warn(
+                "Multiple vertical selections specified. "
+                "Priority: level_indices > heights > index_range > height_range"
+            )
             
         # Business logic validation
         if self.surface_only and not self.surface_nearest:
@@ -280,21 +318,50 @@ class VerticalSelection:
         """Check if any vertical selection is defined."""
         return (self.index_range is not None or 
                 self.height_range is not None or
+                self.level_indices is not None or
+                self.heights is not None or
                 self.surface_nearest)
     
     @property
     def uses_index_selection(self) -> bool:
-        """Check if index-based selection is being used."""
-        return self.index_range is not None
+        """Check if continuous index-based selection is being used."""
+        return self.index_range is not None and self.level_indices is None
     
     @property
     def uses_height_selection(self) -> bool:
-        """Check if height-based selection is being used."""
-        return self.height_range is not None
+        """Check if continuous height-based selection is being used."""
+        return (self.height_range is not None and 
+                self.level_indices is None and 
+                self.heights is None)
     
-    def get_effective_selection(self) -> Union[IndexRange, CoordinateRange, None]:
-        """Get the effective vertical selection (index takes priority)."""
-        return self.index_range if self.index_range is not None else self.height_range
+    @property
+    def uses_arbitrary_indices(self) -> bool:
+        """Check if arbitrary index selection is being used."""
+        return self.level_indices is not None
+    
+    @property
+    def uses_arbitrary_heights(self) -> bool:
+        """Check if arbitrary height selection is being used."""
+        return self.heights is not None and self.level_indices is None
+    
+    @property
+    def uses_arbitrary_selection(self) -> bool:
+        """Check if any arbitrary (non-contiguous) selection is being used."""
+        return self.level_indices is not None or self.heights is not None
+    
+    def get_effective_selection(self) -> Union[Sequence[int], Sequence[float], IndexRange, CoordinateRange, None]:
+        """
+        Get the effective vertical selection based on priority.
+        Priority: level_indices > heights > index_range > height_range
+        """
+        if self.level_indices is not None:
+            return self.level_indices
+        if self.heights is not None:
+            return self.heights
+        if self.index_range is not None:
+            return self.index_range
+        return self.height_range
+
 
 # ============================================================================
 # Processing Options

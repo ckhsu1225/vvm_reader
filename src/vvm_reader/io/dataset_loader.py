@@ -33,9 +33,10 @@ from ..coordinates.spatial import (
 )
 
 from ..processing.vertical import (
-    resolve_vertical_slice, extend_vertical_slice_for_centering,
+    resolve_vertical_selection, extend_vertical_slice_for_centering,
     extract_surface_nearest_values, apply_vertical_selection,
-    crop_vertical_after_centering, ensure_vertical_coordinate_in_meters
+    crop_vertical_after_centering, ensure_vertical_coordinate_in_meters,
+    filter_to_final_indices
 )
 from ..processing.terrain import (
     apply_terrain_mask, center_staggered_variables
@@ -90,32 +91,42 @@ class VVMDatasetLoader:
         coord_info, topo = self._setup_coordinates(params.processing_options.engine)
         slice_info = compute_regional_slices(coord_info, params.region)
         
-        # Step 3: Resolve vertical selection
-        vertical_slice = resolve_vertical_slice(self.sim_dir, params.vertical_selection)
-        
-        # Step 4: Determine if centering is needed
+        # Step 3: Determine if centering is needed (check early for vertical expansion)
         needs_centering = self._check_centering_needed(
             params.variables, params.processing_options.center_staggered
         )
         
-        # Step 5: Compute extended slices for centering if needed
-        read_slice_info, crop_offsets = self._compute_read_slices(
-            slice_info, needs_centering, params.variables
-        )
-
-        # Handle vertical extension for z-staggered variables (w, eta, xi)
+        # Check if z-centering is needed for any variable
         needs_z_centering = any(
             needs_centering.get(var, False) and (params.variables is None or var in params.variables)
             for var in ["w", "eta", "xi"]
         )
-        vertical_read_slice, vertical_crop_offset, vertical_target_length = (
-            extend_vertical_slice_for_centering(vertical_slice, needs_z_centering)
+        
+        # Step 4: Resolve vertical selection (handles both contiguous and arbitrary)
+        vertical_info = resolve_vertical_selection(
+            self.sim_dir, params.vertical_selection, needs_z_centering
         )
+        
+        # Step 5: Compute extended slices for horizontal centering if needed
+        read_slice_info, crop_offsets = self._compute_read_slices(
+            slice_info, needs_centering, params.variables
+        )
+
+        # Handle vertical extension for contiguous selection
+        # (For arbitrary selection, expansion is already done in resolve_vertical_selection)
+        vertical_read_selection = vertical_info.read_selection
+        vertical_crop_offset = 0
+        vertical_target_length = None
+        
+        if vertical_info.is_contiguous and needs_z_centering:
+            vertical_read_selection, vertical_crop_offset, vertical_target_length = (
+                extend_vertical_slice_for_centering(vertical_info.read_selection, needs_z_centering)
+            )
         
         # Step 6: Load data from all groups
         group_datasets = self._load_group_datasets(
             groups_to_load, params, manifest, coord_info,
-            read_slice_info, vertical_read_slice
+            read_slice_info, vertical_read_selection
         )
         
         if not group_datasets:
@@ -128,7 +139,7 @@ class VVMDatasetLoader:
         dataset = self._post_process_dataset(
             dataset, params, coord_info, slice_info,
             crop_offsets, vertical_crop_offset, vertical_target_length,
-            needs_centering, read_slice_info, topo, vertical_slice
+            needs_centering, read_slice_info, topo, vertical_info
         )
         
         return dataset
@@ -291,7 +302,7 @@ class VVMDatasetLoader:
     def _post_process_dataset(
         self, dataset, params, coord_info, slice_info,
         crop_offsets, vertical_crop_offset, vertical_target_length,
-        needs_centering, read_slice_info, topo, vertical_slice
+        needs_centering, read_slice_info, topo, vertical_info
     ):
         """Apply all post-processing operations."""
 
@@ -301,10 +312,19 @@ class VVMDatasetLoader:
         topo_center = apply_spatial_selection(topo, coord_info, mask_slice)
         topo_final = apply_spatial_selection(topo, coord_info, slice_info)
 
-        # Calculate vertical offset for terrain masking
-        # This is needed when vertical slicing is applied - the k indices in the dataset
-        # no longer start from 0, but from the slice start index
-        vertical_offset = vertical_slice.start if vertical_slice is not None and vertical_slice.start is not None else 0
+        # Calculate vertical parameters for terrain masking
+        # For contiguous selection: use offset
+        # For arbitrary selection: use original indices array
+        if vertical_info.is_contiguous:
+            read_sel = vertical_info.read_selection
+            vertical_offset = read_sel.start if read_sel is not None and read_sel.start is not None else 0
+            vertical_indices_for_mask = None
+        else:
+            # For arbitrary selection, we need the original k indices after filtering
+            import numpy as np
+            vertical_offset = 0  # Not used when vertical_indices is provided
+            # After filtering, the dataset contains only the final requested indices
+            vertical_indices_for_mask = vertical_info.original_indices
 
         # Step 1: Center staggered variables (winds and vorticities) if requested
         created_center_vars = []
@@ -315,7 +335,7 @@ class VVMDatasetLoader:
                 params.processing_options.center_suffix,
             )
 
-        # Step 2: Crop back to original selection if halos were added
+        # Step 2: Crop back to original selection if halos were added (horizontal)
         if any(crop_offsets.values()):
             target_shape = {
                 coord_info.x_dim: slice_info.x_slice.stop - (slice_info.x_slice.start or 0),
@@ -325,10 +345,17 @@ class VVMDatasetLoader:
                 dataset, coord_info, crop_offsets, target_shape
             )
 
-        if vertical_crop_offset > 0:
-            dataset = crop_vertical_after_centering(
-                dataset, vertical_crop_offset, vertical_target_length
-            )
+        # Step 2b: Handle vertical cropping/filtering after centering
+        if vertical_info.is_contiguous:
+            # Contiguous selection: use slice-based cropping
+            if vertical_crop_offset > 0:
+                dataset = crop_vertical_after_centering(
+                    dataset, vertical_crop_offset, vertical_target_length
+                )
+        else:
+            # Arbitrary selection: filter to final indices
+            if vertical_info.final_positions is not None:
+                dataset = filter_to_final_indices(dataset, vertical_info.final_positions)
 
         # Step 3: Apply terrain masking
         # Optimization: Skip masking if we only want the surface layer, as it is always above terrain
@@ -339,7 +366,11 @@ class VVMDatasetLoader:
         )
         
         if params.processing_options.mask_terrain and not skip_masking:
-            dataset = apply_terrain_mask(dataset, topo_final, vertical_offset=vertical_offset)
+            dataset = apply_terrain_mask(
+                dataset, topo_final, 
+                vertical_offset=vertical_offset,
+                vertical_indices=vertical_indices_for_mask
+            )
 
         # Step 4: Assign spatial coordinates
         dataset = assign_spatial_coordinates(dataset, coord_info, slice_info)

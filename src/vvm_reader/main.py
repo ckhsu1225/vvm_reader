@@ -63,6 +63,8 @@ def open_vvm_dataset(
     # Flat parameters for VerticalSelection (simpler API)
     vertical_index_range: Optional[Tuple[int, int]] = None,
     height_range: Optional[Tuple[float, float]] = None,
+    heights: Optional[Sequence[float]] = None,
+    level_indices: Optional[Sequence[int]] = None,
     surface_nearest: Optional[bool] = None,
     surface_only: Optional[bool] = None,
     # Other options
@@ -103,8 +105,10 @@ def open_vvm_dataset(
         time_values: Arbitrary list of time values
 
         # Flat parameters for vertical selection (simple)
-        vertical_index_range: Vertical index range (start_level, end_level)
-        height_range: Height range (min_height, max_height) in meters
+        vertical_index_range: Vertical index range (start_level, end_level) - contiguous
+        height_range: Height range (min_height, max_height) in meters - contiguous
+        heights: Arbitrary list of heights in meters (e.g., [500, 1000, 3000])
+        level_indices: Arbitrary list of level indices (e.g., [0, 5, 10, 20])
         surface_nearest: Extract surface-nearest values
         surface_only: Keep only surface values (removes vertical dimension)
 
@@ -124,6 +128,13 @@ def open_vvm_dataset(
         ...     lat_range=(23, 25),
         ...     time_index_range=(0, 36),
         ...     height_range=(0, 5000)
+        ... )
+
+        # Load at arbitrary heights (uses nearest levels)
+        >>> ds = open_vvm_dataset(
+        ...     "/path/to/sim",
+        ...     variables=["th", "w"],
+        ...     heights=[500, 1000, 3000, 5000]
         ... )
 
         # Load with index-based selection
@@ -178,10 +189,20 @@ def open_vvm_dataset(
 
     # Build VerticalSelection
     effective_vertical = vertical_selection or VerticalSelection()
-    if vertical_index_range is not None or height_range is not None or surface_nearest is not None or surface_only is not None:
+    has_vertical_flat = any([
+        vertical_index_range is not None,
+        height_range is not None,
+        heights is not None,
+        level_indices is not None,
+        surface_nearest is not None,
+        surface_only is not None
+    ])
+    if has_vertical_flat:
         effective_vertical = VerticalSelection(
             index_range=vertical_index_range if vertical_index_range is not None else effective_vertical.index_range,
             height_range=height_range if height_range is not None else effective_vertical.height_range,
+            heights=heights if heights is not None else effective_vertical.heights,
+            level_indices=level_indices if level_indices is not None else effective_vertical.level_indices,
             surface_nearest=surface_nearest if surface_nearest is not None else effective_vertical.surface_nearest,
             surface_only=surface_only if surface_only is not None else effective_vertical.surface_only,
         )
