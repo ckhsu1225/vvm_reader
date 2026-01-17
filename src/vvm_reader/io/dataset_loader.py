@@ -469,6 +469,27 @@ class VVMDatasetLoader:
             except Exception as e:
                 logger.warning("Failed to load reference profiles: %s", e)
 
+        # Step 10: Add Coriolis parameter if requested
+        if params.processing_options.add_coriolis_parameter:
+            try:
+                from ..utils.info import get_coriolis_info
+                coriolis_info = get_coriolis_info(self.sim_dir)
+                if coriolis_info is not None:
+                    dataset.attrs['coriolis_parameter'] = coriolis_info['f']
+                    dataset.attrs['coriolis_latitude'] = coriolis_info['latitude']
+                    logger.info(
+                        "Added Coriolis info to dataset: f=%.4e s^-1, lat=%.2f°", 
+                        coriolis_info['f'], coriolis_info['latitude']
+                    )
+                else:
+                    dataset.attrs['coriolis_parameter'] = None
+                    dataset.attrs['coriolis_latitude'] = None
+                    logger.info("CORIOLIS not enabled in this simulation")
+            except Exception as e:
+                logger.warning("Failed to get Coriolis info: %s", e)
+                dataset.attrs['coriolis_parameter'] = None
+                dataset.attrs['coriolis_latitude'] = None
+
         return dataset
 
 # ============================================================================

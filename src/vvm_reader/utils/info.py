@@ -358,3 +358,74 @@ def get_reference_profiles(sim_dir: Union[str, Path]) -> 'xr.Dataset':
     )
     
     return ds
+
+
+# ============================================================================
+# Coriolis Parameter
+# ============================================================================
+
+def get_coriolis_info(sim_dir: Union[str, Path]) -> Optional[Dict]:
+    """
+    Get Coriolis information from vvm.setup if CORIOLIS is enabled.
+    
+    Parses vvm.setup for:
+    - #define CORIOLIS (must be within the definesld.com block, before 'END1')
+    - &INPUT2 RLAT=<latitude> (degrees)
+    
+    Args:
+        sim_dir: Simulation directory path
+        
+    Returns:
+        Dict with keys 'f' (s^-1) and 'latitude' (degrees), or None if CORIOLIS not defined
+        
+    Example:
+        >>> info = vvm.get_coriolis_info("/path/to/simulation")
+        >>> if info is not None:
+        ...     print(f"f = {info['f']:.2e} s^-1, lat = {info['latitude']}°")
+    """
+    import re
+    
+    sim_path = Path(sim_dir)
+    setup_file = sim_path / 'vvm.setup'
+    
+    if not setup_file.exists():
+        return None
+    
+    try:
+        content = setup_file.read_text()
+    except Exception:
+        return None
+    
+    # Find the definesld.com block (between << 'END1' and 'END1')
+    # Only defines within this block are active
+    end1_pattern = r"<<\s*['\"]?END1['\"]?\s*\n(.*?)\n\s*['\"]?END1['\"]?"
+    match = re.search(end1_pattern, content, re.DOTALL)
+    
+    if match is None:
+        return None
+    
+    defines_block = match.group(1)
+    
+    # Check if #define CORIOLIS is present in the defines block
+    if '#define CORIOLIS' not in defines_block:
+        return None
+    
+    # Parse RLAT from &INPUT2
+    # Pattern: &INPUT2 ... RLAT=<value> ...
+    rlat_pattern = r'&INPUT2[^/]*RLAT\s*=\s*([+-]?\d+\.?\d*)'
+    rlat_match = re.search(rlat_pattern, content)
+    
+    if rlat_match is None:
+        return None
+    
+    lat_deg = float(rlat_match.group(1))
+    
+    # Compute Coriolis parameter: f = 2 * Omega * sin(lat)
+    OMEGA = 7.292e-5  # Earth's angular velocity (rad/s)
+    lat_rad = np.deg2rad(lat_deg)
+    f = 2 * OMEGA * np.sin(lat_rad)
+    
+    return {
+        'f': float(f),
+        'latitude': lat_deg
+    }

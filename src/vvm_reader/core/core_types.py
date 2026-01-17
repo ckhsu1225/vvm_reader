@@ -386,6 +386,7 @@ class ProcessingOptions:
     center_suffix: str = "_c"
     add_terrain_height: bool = False
     add_reference_profiles: bool = False
+    add_coriolis_parameter: bool = True
     chunks: ChunkSetting = "auto"
     engine: Optional[str] = None
 

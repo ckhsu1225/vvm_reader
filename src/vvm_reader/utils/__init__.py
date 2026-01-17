@@ -15,6 +15,7 @@ from .info import (
     get_spatial_info,
     get_terrain_height,
     get_reference_profiles,
+    get_coriolis_info,
 )
 
 # Conversion functions
@@ -36,6 +37,7 @@ __all__ = [
     "get_spatial_info",
     "get_terrain_height",
     "get_reference_profiles",
+    "get_coriolis_info",
     # Conversion functions
     "convert_coordinates_to_indices",
     "convert_indices_to_coordinates",
