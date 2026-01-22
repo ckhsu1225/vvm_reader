@@ -488,6 +488,140 @@ def compute_saturation_equivalent_potential_temperature(
 
 
 # ============================================================================
+# Buoyancy
+# ============================================================================
+
+@register_diagnostic(
+    name='b',
+    profile_dependencies=['THBAR', 'QVBAR'],
+    diagnostic_dependencies=['thv'],
+    long_name='buoyancy',
+    units='m s-2',
+    description='B = (g/θv_bar) × θv\' using anelastic approximation',
+)
+def compute_buoyancy(ds: xr.Dataset, profiles: xr.Dataset,
+                     diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
+    """
+    Compute buoyancy using anelastic approximation.
+
+    B = (g / θv_bar) × θv' = (g / θv_bar) × (θv - θv_bar)
+
+    Buoyancy represents the vertical acceleration due to density differences
+    relative to the background state. Positive values indicate upward
+    acceleration (air parcel is lighter than environment).
+
+    Args:
+        ds: Dataset (not used directly)
+        profiles: Dataset containing 'THBAR', 'QVBAR' background profiles
+        diagnostics: Dictionary containing 'thv' (virtual potential temperature)
+
+    Returns:
+        Buoyancy [m s⁻²]
+
+    Notes:
+        Consistent with VVM's anelastic approximation where buoyancy is
+        linearized about the background state θv_bar.
+    """
+    from .constants import g, epsilon
+
+    # Get background profiles
+    thbar = profiles['THBAR']
+    qvbar = profiles['QVBAR']
+
+    # Compute background virtual potential temperature
+    # θv_bar = θ_bar * (1 + qv_bar/ε) / (1 + qv_bar)
+    thv_bar = thbar * (1.0 + qvbar / epsilon) / (1.0 + qvbar)
+
+    # Get full θv field
+    thv = diagnostics['thv']
+
+    # Compute perturbation
+    thv_prime = thv - thv_bar
+
+    # Compute buoyancy: B = (g/θv_bar) × θv'
+    b = (g / thv_bar) * thv_prime
+
+    b.attrs = {
+        'long_name': 'buoyancy',
+        'units': 'm s-2',
+        'description': 'Buoyancy acceleration: B = (g/θv_bar) × (θv - θv_bar)'
+    }
+
+    return b
+
+
+# ============================================================================
+# Static Stability
+# ============================================================================
+
+@register_diagnostic(
+    name='n2',
+    profile_dependencies=['THBAR', 'QVBAR'],
+    diagnostic_dependencies=['thv'],
+    long_name='static stability (Brunt-Vaisala frequency squared)',
+    units='s-2',
+    description='N² = (g/θv_bar) * ∂θv/∂z using background θv in denominator',
+)
+def compute_brunt_vaisala_frequency_squared(ds: xr.Dataset, profiles: xr.Dataset,
+               diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
+    """
+    Compute static stability (Brunt-Väisälä frequency squared).
+
+    N² = (g / θv_bar) * ∂θv/∂z
+
+    Uses background state θv_bar in the denominator (consistent with VVM's
+    anelastic approximation), but the full θv field for the vertical derivative
+    to capture actual stability variations.
+
+    Static stability measures resistance to vertical displacement:
+    - N² > 0: Stable stratification (oscillatory motion)
+    - N² < 0: Unstable (convective instability)
+
+    Args:
+        ds: Dataset (not used directly)
+        profiles: Dataset containing 'THBAR', 'QVBAR' background profiles
+        diagnostics: Dictionary containing 'thv' (virtual potential temperature)
+
+    Returns:
+        Static stability [s⁻²]
+
+    Notes:
+        Typical tropospheric values: N² ~ 1e-4 s⁻²
+    """
+    from .constants import g, epsilon
+
+    # Get background profiles for denominator
+    thbar = profiles['THBAR']
+    qvbar = profiles['QVBAR']
+
+    # Compute background virtual potential temperature
+    # θv_bar = θ_bar * (1 + qv_bar/ε) / (1 + qv_bar)
+    thv_bar = thbar * (1.0 + qvbar / epsilon) / (1.0 + qvbar)
+
+    # Get full θv field for derivative
+    thv = diagnostics['thv']
+
+    # Rechunk lev dimension if needed for dask (differentiate requires chunk size > 1)
+    if hasattr(thv.data, 'chunks') and 'lev' in thv.dims:
+        lev_axis = thv.dims.index('lev')
+        if thv.data.chunks[lev_axis] and min(thv.data.chunks[lev_axis]) < 2:
+            thv = thv.chunk({'lev': -1})
+
+    # Compute N²: (g/θv_bar) * ∂θv/∂z
+    dthv_dz = thv.differentiate(coord='lev')
+    n2 = (g / thv_bar) * dthv_dz
+
+    n2.attrs = {
+        'long_name': 'static stability',
+        'units': 's-2',
+        'standard_name': 'square_of_brunt_vaisala_frequency_in_air',
+        'description': 'Brunt-Väisälä frequency squared: N² = (g/θv_bar) * ∂θv/∂z'
+    }
+
+    return n2
+
+
+# ============================================================================
 # Utility Functions
 # ============================================================================
 
@@ -551,6 +685,8 @@ __all__ = [
     'compute_virtual_potential_temperature',
     'compute_equivalent_potential_temperature',
     'compute_saturation_equivalent_potential_temperature',
+    'compute_buoyancy',
+    'compute_brunt_vaisala_frequency_squared',
 
     # Utility functions
     'saturation_vapor_pressure',

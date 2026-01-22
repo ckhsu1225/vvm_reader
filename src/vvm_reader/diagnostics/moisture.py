@@ -186,24 +186,24 @@ def compute_column_water_vapor(ds: xr.Dataset, profiles: xr.Dataset,
 
 @register_diagnostic(
     name='lwp',
-    file_dependencies=['qc'],
+    file_dependencies=['qc', 'qr'],
     profile_dependencies=['RHO'],
     long_name='liquid water path',
     units='kg m-2',
-    description='vertically integrated cloud liquid water',
+    description='vertically integrated liquid water (cloud water + rain)',
 )
 def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
                               diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
     """
-    Compute liquid water path (cloud liquid water only).
+    Compute liquid water path (cloud water + rain).
 
     Formula:
-        LWP = ∫ ρ × qc dz
+        LWP = ∫ ρ × (qc + qr) dz
 
-    where qc is cloud water mixing ratio.
+    where qc is cloud water mixing ratio and qr is rain mixing ratio.
 
     Args:
-        ds: Dataset containing 'qc'
+        ds: Dataset containing 'qc' and 'qr'
         profiles: Dictionary containing 'RHO'
 
     Returns:
@@ -216,8 +216,18 @@ def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
 
     qc = ds['qc']
 
+    # Get qr if available, otherwise use zeros
+    if 'qr' in ds:
+        qr = ds['qr']
+    else:
+        logger.warning("LWP: 'qr' not found, using only 'qc'")
+        qr = xr.zeros_like(qc)
+
+    # Total liquid water mixing ratio
+    ql = qc + qr
+
     # Check vertical dimension
-    if 'lev' not in qc.dims:
+    if 'lev' not in ql.dims:
         logger.warning("LWP calculation requires vertical dimension 'lev'")
         return None
 
@@ -236,7 +246,7 @@ def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
 
     # profiles['RHO'] is xr.DataArray with lev coordinate
     # xarray will automatically align coordinates
-    integrand = profiles['RHO'] * qc
+    integrand = profiles['RHO'] * ql
 
     # Handle terrain masking: NaN values below terrain should not contribute to integral
     # Replace NaN with 0 before integration (terrain has no liquid water)
@@ -248,7 +258,7 @@ def compute_liquid_water_path(ds: xr.Dataset, profiles: xr.Dataset,
     LWP.attrs = {
         'long_name': 'liquid water path',
         'units': 'kg m-2',
-        'description': 'vertically integrated cloud liquid water'
+        'description': 'vertically integrated liquid water (cloud water + rain)'
     }
 
     return LWP
@@ -324,6 +334,62 @@ def compute_ice_water_path(ds: xr.Dataset, profiles: xr.Dataset,
     return IWP
 
 
+@register_diagnostic(
+    name='crh',
+    profile_dependencies=['RHO', 'PIBAR', 'PBAR'],
+    diagnostic_dependencies=['cwv', 't'],
+    long_name='column relative humidity',
+    units='%',
+    description='ratio of column water vapor to column saturation water vapor',
+)
+def compute_column_relative_humidity(ds: xr.Dataset, profiles: xr.Dataset,
+                                      diagnostics: Dict[str, xr.DataArray]) -> xr.DataArray:
+    """
+    Compute column relative humidity.
+
+    Formula:
+        CRH = CWV / CWVS × 100%
+
+    where CWV is column water vapor and CWVS is column saturation water vapor.
+
+    Args:
+        ds: Dataset
+        profiles: Dataset containing 'RHO', 'PBAR'
+        diagnostics: Dictionary containing 'cwv' and 't' (temperature)
+
+    Returns:
+        Column relative humidity [%]
+    """
+    CWV = diagnostics['cwv']
+    T = diagnostics['t']
+    P = profiles['PBAR']
+    RHO = profiles['RHO']
+
+    # Check vertical dimension for saturation calculation
+    if 'lev' not in T.dims:
+        logger.warning("CRH calculation requires vertical dimension 'lev'")
+        return None
+
+    # Compute saturation mixing ratio
+    qvs = saturation_mixing_ratio(T, P)
+
+    # Column saturation water vapor
+    cwvs_integrand = (RHO * qvs).fillna(0.0)
+    CWVS = cwvs_integrand.integrate('lev')
+
+    # Column relative humidity
+    CRH = (CWV / CWVS) * 100.0
+    CRH = CRH.clip(min=0., max=100.0)
+
+    CRH.attrs = {
+        'long_name': 'column relative humidity',
+        'units': '%',
+        'description': 'ratio of column water vapor to column saturation water vapor'
+    }
+
+    return CRH
+
+
 # ============================================================================
 # Exports
 # ============================================================================
@@ -334,4 +400,5 @@ __all__ = [
     'compute_column_water_vapor',
     'compute_liquid_water_path',
     'compute_ice_water_path',
+    'compute_column_relative_humidity',
 ]
